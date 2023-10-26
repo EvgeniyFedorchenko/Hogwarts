@@ -1,13 +1,14 @@
+package Hogwarts;
 
 // Слизерин
-public class Slytherin extends Hogwarts {
+public class SlytherinStudents extends HogwartsStudents {
     private int resourcefulness;
     private int ambitious;
     private int determination;
     private int trick;
 
-    public Slytherin(String name, int powerOfMagic, int transgressionDistance, int resourcefulness, int ambitious,
-                     int determination, int trick) {
+    public SlytherinStudents(String name, int powerOfMagic, int transgressionDistance, int resourcefulness, int ambitious,
+                             int determination, int trick) {
         super(name, powerOfMagic, transgressionDistance);
         this.resourcefulness = resourcefulness;
         this.ambitious = ambitious;
@@ -15,7 +16,7 @@ public class Slytherin extends Hogwarts {
         this.trick = trick;
     }
 
-    public void compareWith(Slytherin student) {
+    public void compareWith(SlytherinStudents student) {
 
         int sumOfThisProperty = this.resourcefulness + this.ambitious + this.determination + this.ambitious;
         int sumOfThatProperty = student.resourcefulness + student.ambitious + student.determination + student.ambitious;

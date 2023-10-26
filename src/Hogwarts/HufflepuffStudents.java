@@ -1,18 +1,19 @@
+package Hogwarts;
 
 // Пуффендуй
-public class Hufflepuff extends Hogwarts {
+public class HufflepuffStudents extends HogwartsStudents {
     private int honesty;
     private int loyalty;
     private int hardWork;
 
-    public Hufflepuff(String name, int powerOfMagic, int transgressionDistance, int honesty, int loyalty, int hardWork) {
+    public HufflepuffStudents(String name, int powerOfMagic, int transgressionDistance, int honesty, int loyalty, int hardWork) {
         super(name, powerOfMagic, transgressionDistance);
         this.honesty = honesty;
         this.loyalty = loyalty;
         this.hardWork = hardWork;
     }
 
-    public void compareWith(Hufflepuff student) {
+    public void compareWith(HufflepuffStudents student) {
 
         int sumOfThisProperty = this.honesty + this.loyalty + this.hardWork;
         int sumOfThatProperty = student.honesty + student.loyalty + student.hardWork;

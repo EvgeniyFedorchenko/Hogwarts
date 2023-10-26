@@ -1,19 +1,20 @@
-public class Hogwarts {
+package Hogwarts;
+
+public abstract class HogwartsStudents {
     private final String name;
     private int powerOfMagic;
     private int transgressionDistance;
 
-    public Hogwarts(String name, int powerOfMagic, int transgressionDistance) {
+    public HogwartsStudents(String name, int powerOfMagic, int transgressionDistance) {
         this.name = name;
         this.powerOfMagic = powerOfMagic;
         this.transgressionDistance = transgressionDistance;
     }
 
-    public String getName() {
+    protected String getName() {
         return name;
     }
-
-    public void interfacultyCompareWith(Hogwarts student) {
+    public void compareWith(HogwartsStudents student) {
         int sumOfThisProperty = this.powerOfMagic + this.transgressionDistance;
         int sumOfThatProperty = student.powerOfMagic + student.transgressionDistance;
 

@@ -1,18 +1,23 @@
+package Hogwarts;
 
 // Когтевран
-public class Ravenclaw extends Hogwarts {
+public class RavenclawStudents extends HogwartsStudents {
     private int wisdom;
     private int witty;
     private int creativity;
 
-    public Ravenclaw(String name, int powerOfMagic, int transgressionDistance, int wisdom, int witty, int creativity) {
+    public RavenclawStudents(String name, int powerOfMagic, int transgressionDistance, int wisdom, int witty, int creativity) {
         super(name, powerOfMagic, transgressionDistance);
         this.wisdom = wisdom;
         this.witty = witty;
         this.creativity = creativity;
     }
 
-    public void compareWith(Ravenclaw student) {
+    public RavenclawStudents(String name, int powerOfMagic, int transgressionDistance) {
+        super(name, powerOfMagic, transgressionDistance);
+    }
+
+    public void compareWith(RavenclawStudents student) {
 
         int sumOfThisProperty = this.wisdom + this.witty + this.creativity;
         int sumOfThatProperty = student.wisdom + student.witty + student.creativity;
