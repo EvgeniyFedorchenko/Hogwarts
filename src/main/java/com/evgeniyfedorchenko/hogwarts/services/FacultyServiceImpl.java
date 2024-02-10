@@ -4,8 +4,7 @@ import com.evgeniyfedorchenko.hogwarts.models.Color;
 import com.evgeniyfedorchenko.hogwarts.models.Faculty;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class FacultyServiceImpl implements FacultyService {
@@ -13,8 +12,8 @@ public class FacultyServiceImpl implements FacultyService {
     private final Map<Long, Faculty> faculties;
     private Long countId = 0L;
 
-    public FacultyServiceImpl(Map<Long, Faculty> faculties) {
-        this.faculties = faculties;
+    public FacultyServiceImpl() {
+        this.faculties = new HashMap<>();
     }
 
     public Faculty createFaculty(String name, Color color) {

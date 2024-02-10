@@ -1,17 +1,19 @@
 package com.evgeniyfedorchenko.hogwarts.models;
 
+import java.util.Objects;
+
 public class Student {
 
     private Long id;
     private String name;
     private int age;
-    private Faculty faculty;
+    private Long facultyId;
 
-    public Student(Long id, String name, int age, Faculty faculty) {
+    public Student(Long id, String name, int age, Long facultyId) {
         this.id = id;
         this.name = name;
         this.age = age;
-        this.faculty = faculty;
+        this.facultyId = facultyId;
     }
 
     public Long getId() {
@@ -38,11 +40,28 @@ public class Student {
         this.age = age;
     }
 
-    public Faculty getFaculty() {
-        return faculty;
+    public Long getFacultyId() {
+        return facultyId;
     }
 
-    public void setFaculty(Faculty faculty) {
-        this.faculty = faculty;
+    public void setFacultyId(Long facultyId) {
+        this.facultyId = facultyId;
+    }
+
+    @Override
+    public boolean equals(Object otherStudent) {     /*Каждый студент имеет свой УНИКАЛЬНЫЙ id*/
+        if (this == otherStudent) {
+            return true;
+        }
+        if (otherStudent == null || getClass() != otherStudent.getClass()) {
+            return false;
+        }
+        Student student = (Student) otherStudent;
+        return Objects.equals(id, student.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }
