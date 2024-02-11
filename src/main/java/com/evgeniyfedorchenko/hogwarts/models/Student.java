@@ -49,7 +49,7 @@ public class Student {
     }
 
     @Override
-    public boolean equals(Object otherStudent) {     /*Каждый студент имеет свой УНИКАЛЬНЫЙ id*/
+    public boolean equals(Object otherStudent) {     /* Каждый студент имеет свой УНИКАЛЬНЫЙ id */
         if (this == otherStudent) {
             return true;
         }

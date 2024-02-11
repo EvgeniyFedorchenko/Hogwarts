@@ -4,8 +4,10 @@ import com.evgeniyfedorchenko.hogwarts.models.Student;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class StudentServiceImpl implements StudentService {
@@ -20,7 +22,8 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public Student createStudent(Student student) {
         student.setId(++countId);
-        return students.put(student.getId(), student);
+        students.put(student.getId(), student);
+        return student;
     }
 
     @Override
@@ -30,13 +33,24 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     public Optional<Student> updateStudent(Long id, Student student) {
-        return (students.containsKey(id) && student != null)
-                ? Optional.of(students.put(id, student))
-                : Optional.empty();
+        if (students.containsKey(id) && student != null) {
+            Student old = students.get(id);
+            students.replace(id, student);
+            return Optional.of(old);
+        } else {
+            return Optional.empty();
+        }
     }
 
     @Override
     public Optional<Student> deleteStudent(Long id) {
         return (students.containsKey(id)) ? Optional.of(students.remove(id)) : Optional.empty();
+    }
+
+    @Override
+    public List<Student> getStudentWithAge(int age) {
+        return students.values().stream()
+                .filter(student -> student.getAge() == age)
+                .collect(Collectors.toList());
     }
 }

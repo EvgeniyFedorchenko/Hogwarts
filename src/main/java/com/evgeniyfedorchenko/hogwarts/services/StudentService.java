@@ -2,6 +2,7 @@ package com.evgeniyfedorchenko.hogwarts.services;
 
 import com.evgeniyfedorchenko.hogwarts.models.Student;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface StudentService {
@@ -13,4 +14,6 @@ public interface StudentService {
     Optional<Student> updateStudent(Long id, Student student);
 
     Optional<Student> deleteStudent(Long id);
+
+    List<Student> getStudentWithAge(int age);
 }

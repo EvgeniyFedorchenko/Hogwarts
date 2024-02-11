@@ -5,7 +5,7 @@ import com.evgeniyfedorchenko.hogwarts.services.StudentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
+import java.util.List;
 
 @RestController
 @RequestMapping(path = "/students")
@@ -19,31 +19,33 @@ public class StudentController {
 
     @PostMapping
     public ResponseEntity<Student> createStudent(@RequestBody Student student) {
-        Student createdStudent = studentService.createStudent(student);
-        return ResponseEntity.ok(student);
+        return ResponseEntity.ok(studentService.createStudent(student));
     }
 
     @GetMapping(path = "/{id}")
     public ResponseEntity<Student> getStudent(@PathVariable Long id) {
-        Optional<Student> student = studentService.getStudent(id);
-        return student.map(ResponseEntity::ok)
+        return studentService.getStudent(id)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping
+    public List<Student> getStudentsWithAge(@RequestParam int age) {
+        return studentService.getStudentWithAge(age);
     }
 
     @PutMapping(path = "/{id}")
     public ResponseEntity<Student> updateStudent(@PathVariable Long id, @RequestBody Student student) {
-        if (student == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        Optional<Student> updatedStudent = studentService.updateStudent(id, student);
-        return updatedStudent.map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return (student == null) ? ResponseEntity.badRequest().build()
+                : studentService.updateStudent(id, student)
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping(path = "/{id}")
     public ResponseEntity<Student> deleteStudent(@PathVariable Long id) {
-        Optional<Student> deletedStudent = studentService.deleteStudent(id);
-        return deletedStudent.map(ResponseEntity::ok)
+        return studentService.deleteStudent(id)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

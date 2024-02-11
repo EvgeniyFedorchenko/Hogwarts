@@ -2,9 +2,11 @@ package com.evgeniyfedorchenko.hogwarts.services;
 
 import com.evgeniyfedorchenko.hogwarts.models.Color;
 import com.evgeniyfedorchenko.hogwarts.models.Faculty;
+import com.evgeniyfedorchenko.hogwarts.models.Student;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class FacultyServiceImpl implements FacultyService {
@@ -16,18 +18,14 @@ public class FacultyServiceImpl implements FacultyService {
         this.faculties = new HashMap<>();
     }
 
-    public Faculty createFaculty(String name, Color color) {
-        Faculty faculty = new Faculty(++countId, name, color);
-        return createFaculty(faculty);
-    }
-
     @Override
     public Faculty createFaculty(Faculty faculty) {
         if (faculties.containsValue(faculty)) {   // Двух Гриффиндоров под разными id не должно существовать
             return faculty;                             // см. Faculty.equals()
         }
         faculty.setId(++countId);
-        return faculties.put(faculty.getId(), faculty);
+        faculties.put(faculty.getId(), faculty);
+        return faculty;
     }
 
     @Override
@@ -37,13 +35,24 @@ public class FacultyServiceImpl implements FacultyService {
 
     @Override
     public Optional<Faculty> updateFaculty(Long id, Faculty faculty) {
-        return (faculties.containsKey(id) && faculty != null)
-                ? Optional.of(faculties.put(id, faculty))
-                : Optional.empty();
+        if (faculties.containsKey(id) && faculty != null) {
+            Faculty old = faculties.get(id);
+            faculties.replace(id, faculty);
+            return Optional.of(old);
+        } else {
+            return Optional.empty();
+        }
     }
 
     @Override
     public Optional<Faculty> deleteFaculty(Long id) {
         return (faculties.containsKey(id)) ? Optional.of(faculties.remove(id)) : Optional.empty();
+    }
+
+    @Override
+    public List<Faculty> getFacultyWithColor(Color color) {
+        return faculties.values().stream()
+                .filter(faculty -> faculty.getColor() == color)
+                .collect(Collectors.toList());
     }
 }
