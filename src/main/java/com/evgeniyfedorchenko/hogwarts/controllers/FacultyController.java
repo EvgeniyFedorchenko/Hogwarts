@@ -2,7 +2,6 @@ package com.evgeniyfedorchenko.hogwarts.controllers;
 
 import com.evgeniyfedorchenko.hogwarts.models.Color;
 import com.evgeniyfedorchenko.hogwarts.models.Faculty;
-import com.evgeniyfedorchenko.hogwarts.models.Student;
 import com.evgeniyfedorchenko.hogwarts.services.FacultyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,8 +25,9 @@ public class FacultyController {
 
     @GetMapping(path = "/{id}")
     public ResponseEntity<Faculty> getFaculty(@PathVariable Long id) {
-        return facultyService.getFaculty(id).map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return facultyService.getFaculty(id)
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping
@@ -37,8 +37,7 @@ public class FacultyController {
 
     @PutMapping(path = "/{id}")
     public ResponseEntity<Faculty> updateFaculty(@PathVariable Long id, @RequestBody Faculty faculty) {
-        return (faculty == null) ? ResponseEntity.badRequest().build()
-                : facultyService.updateFaculty(id, faculty)
+        return facultyService.updateFaculty(id, faculty)
                     .map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -46,7 +45,7 @@ public class FacultyController {
     @DeleteMapping(path = "/{id}")
     public ResponseEntity<Faculty> deleteFaculty(@PathVariable Long id) {
         return facultyService.deleteFaculty(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

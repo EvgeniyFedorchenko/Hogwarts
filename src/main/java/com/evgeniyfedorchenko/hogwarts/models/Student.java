@@ -9,6 +9,10 @@ public class Student {
     private int age;
     private Long facultyId;
 
+    public Student() {
+
+    }
+
     public Student(Long id, String name, int age, Long facultyId) {
         this.id = id;
         this.name = name;

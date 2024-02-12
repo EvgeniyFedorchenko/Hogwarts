@@ -11,8 +11,8 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static com.evgeniyfedorchenko.hogwarts.services.Constants.*;
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class StudentServiceImplTest {
 
@@ -31,6 +31,7 @@ class StudentServiceImplTest {
             out.deleteStudent(id);
         }
     }
+
     @Test
     void createStudentTest() {
         Student actual = out.createStudent(STUDENT_3);
@@ -59,15 +60,15 @@ class StudentServiceImplTest {
     }
 
     @Test
-    void updateStudentNegativeTest1() {
+    void updateStudentWithNegativeIdNegativeTest() {
         Optional<Student> actual = out.updateStudent(-1L, STUDENT_4);
         assertThat(actual).isEqualTo(Optional.empty());
         assertThatThrownBy(actual::get).isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
-    void updateStudentNegativeTest2() {
-        Optional<Student> actual = out.updateStudent(2L, null);
+    void updateStudentNonexistentIdNegativeTest() {
+        Optional<Student> actual = out.updateStudent(3L, null);
         assertThat(actual).isEqualTo(Optional.empty());
         assertThatThrownBy(actual::get).isInstanceOf(NoSuchElementException.class);
     }

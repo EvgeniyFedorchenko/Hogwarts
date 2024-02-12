@@ -25,8 +25,8 @@ public class StudentController {
     @GetMapping(path = "/{id}")
     public ResponseEntity<Student> getStudent(@PathVariable Long id) {
         return studentService.getStudent(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping
@@ -36,8 +36,7 @@ public class StudentController {
 
     @PutMapping(path = "/{id}")
     public ResponseEntity<Student> updateStudent(@PathVariable Long id, @RequestBody Student student) {
-        return (student == null) ? ResponseEntity.badRequest().build()
-                : studentService.updateStudent(id, student)
+        return studentService.updateStudent(id, student)
                     .map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -45,7 +44,7 @@ public class StudentController {
     @DeleteMapping(path = "/{id}")
     public ResponseEntity<Student> deleteStudent(@PathVariable Long id) {
         return studentService.deleteStudent(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

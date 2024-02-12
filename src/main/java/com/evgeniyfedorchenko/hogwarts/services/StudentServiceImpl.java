@@ -1,6 +1,7 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
 import com.evgeniyfedorchenko.hogwarts.models.Student;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -32,8 +33,8 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public Optional<Student> updateStudent(Long id, Student student) {
-        if (students.containsKey(id) && student != null) {
+    public Optional<Student> updateStudent(Long id, @NotNull Student student) {
+        if (students.containsKey(id)) {
             Student old = students.get(id);
             students.replace(id, student);
             return Optional.of(old);

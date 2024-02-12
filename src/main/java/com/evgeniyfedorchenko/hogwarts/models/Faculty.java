@@ -8,6 +8,10 @@ public class Faculty {
     private String name;
     private Color color;
 
+    public Faculty() {
+
+    }
+
     public Faculty(Long id, String name, Color color) {
         this.id = id;
         this.name = name;
