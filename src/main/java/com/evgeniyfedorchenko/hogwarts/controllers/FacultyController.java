@@ -35,9 +35,9 @@ public class FacultyController {
         return facultyService.getFacultyWithColor(color);
     }
 
-    @PutMapping(path = "/{id}")
-    public ResponseEntity<Faculty> updateFaculty(@PathVariable Long id, @RequestBody Faculty faculty) {
-        return facultyService.updateFaculty(id, faculty)
+    @PutMapping
+    public ResponseEntity<Faculty> updateFaculty(@RequestBody Faculty faculty) {
+        return facultyService.updateFaculty(faculty)
                     .map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());
     }

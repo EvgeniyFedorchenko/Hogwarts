@@ -34,9 +34,9 @@ public class StudentController {
         return studentService.getStudentWithAge(age);
     }
 
-    @PutMapping(path = "/{id}")
-    public ResponseEntity<Student> updateStudent(@PathVariable Long id, @RequestBody Student student) {
-        return studentService.updateStudent(id, student)
+    @PutMapping
+    public ResponseEntity<Student> updateStudent(@RequestBody Student student) {
+        return studentService.updateStudent(student)
                     .map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());
     }

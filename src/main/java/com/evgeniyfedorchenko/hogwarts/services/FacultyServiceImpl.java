@@ -32,8 +32,10 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     @Override
-    public Optional<Faculty> updateFaculty(Long id, Faculty faculty) {
+    public Optional<Faculty> updateFaculty(Faculty faculty) {
         validateFaculty(faculty);
+        findAlreadyBeingFacultiesWithThisName(faculty.getName());
+
         return facultyRepository.findById(faculty.getId()).isPresent()
                 ? Optional.of(facultyRepository.save(faculty))
                 : Optional.empty();
@@ -62,9 +64,10 @@ public class FacultyServiceImpl implements FacultyService {
         if (faculty.getName() == null || faculty.getColor() == null) {
             throw new IllegalFacultyFieldsException("Any faculty's field cannot be null");
         }
+    }
 
-        // Ищем факультеты с такими же именами
-        List<Faculty> byNameLike = facultyRepository.findByNameLike(faculty.getName());
+    private void findAlreadyBeingFacultiesWithThisName(String name) {
+        List<Faculty> byNameLike = facultyRepository.findByNameLike(name);
         if (!byNameLike.isEmpty()) {
             throw new IllegalFacultyFieldsException("This faculty already exist");
         }

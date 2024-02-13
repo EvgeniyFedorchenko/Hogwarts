@@ -3,8 +3,6 @@ package com.evgeniyfedorchenko.hogwarts.services;
 import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalStudentFieldsException;
 import com.evgeniyfedorchenko.hogwarts.models.Student;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,7 +19,7 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public Student createStudent(@NotEmpty Student student) {
+    public Student createStudent(Student student) {
         validateStudent(student);
         student.setId(0L);
         return studentRepository.save(student);
@@ -33,7 +31,7 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public Optional<Student> updateStudent(Long id, @NotNull Student student) {
+    public Optional<Student> updateStudent(Student student) {
         validateStudent(student);
         return studentRepository.findById(student.getId()).isPresent()
                 ? Optional.of(studentRepository.save(student))
