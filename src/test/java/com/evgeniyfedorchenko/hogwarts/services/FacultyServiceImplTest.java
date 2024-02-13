@@ -31,14 +31,6 @@ class FacultyServiceImplTest {
     @InjectMocks
     private FacultyServiceImpl out;
 
-    @BeforeEach
-    public void beforeEach() {
-        when(facultyRepositoryMock.save(FACULTY_1)).thenReturn(FACULTY_1);
-        when(facultyRepositoryMock.save(FACULTY_2)).thenReturn(FACULTY_2);
-        out.createFaculty(FACULTY_1);
-        out.createFaculty(FACULTY_2);
-    }
-
     @Test
     void createFacultyPositiveTest() {
         when(facultyRepositoryMock.save(FACULTY_3)).thenReturn(FACULTY_3);

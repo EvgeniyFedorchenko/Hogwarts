@@ -30,14 +30,6 @@ class StudentServiceImplTest {
     @InjectMocks
     private StudentServiceImpl out;
 
-    @BeforeEach
-    public void beforeEach() {
-        when(studentRepositoryMock.save(STUDENT_1)).thenReturn(STUDENT_1);
-        when(studentRepositoryMock.save(STUDENT_2)).thenReturn(STUDENT_2);
-        out.createStudent(STUDENT_1);
-        out.createStudent(STUDENT_2);
-    }
-
     @Test
     void createStudentPositiveTest() {
         when(studentRepositoryMock.save(STUDENT_3)).thenReturn(STUDENT_3);
