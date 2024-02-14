@@ -20,8 +20,12 @@ public class FacultyServiceImpl implements FacultyService {
     @Override
     public Faculty createFaculty(Faculty faculty) {
         validateFaculty(faculty);
-        faculty.setId(0L);
-        return facultyRepository.save(faculty);
+
+        Faculty newFaculty = new Faculty();
+        newFaculty.setName(faculty.getName());
+        newFaculty.setColor(faculty.getColor());
+
+        return facultyRepository.save(newFaculty);
     }
 
     @Override

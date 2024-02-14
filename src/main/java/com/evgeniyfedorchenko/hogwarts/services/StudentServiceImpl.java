@@ -20,8 +20,13 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public Student createStudent(Student student) {
         validateStudent(student);
-        student.setId(4L);
-        return studentRepository.save(student);
+
+        Student newStudent = new Student();
+        newStudent.setName(student.getName());
+        newStudent.setAge(student.getAge());
+        newStudent.setFacultyId(student.getFacultyId());
+
+        return studentRepository.save(newStudent);
     }
 
     @Override
