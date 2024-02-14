@@ -64,7 +64,7 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     private void findAlreadyBeingFacultiesWithThisName(String name) {
-        if (facultyRepository.existByName(name)) {
+        if (facultyRepository.existsByName(name)) {
             throw new IllegalFacultyFieldsException("This faculty already exist");
         }
     }

@@ -20,7 +20,7 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public Student createStudent(Student student) {
         validateStudent(student);
-        student.setId(0L);
+        student.setId(4L);
         return studentRepository.save(student);
     }
 

@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface FacultyRepository extends JpaRepository<Faculty, Long> {
 
-    boolean existByName(String name);
+    boolean existsByName(String name);
     List<Faculty> findByColor(Color color);
 }
