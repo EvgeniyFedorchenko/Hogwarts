@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class StudentServiceImpl implements StudentService {
@@ -43,7 +42,7 @@ public class StudentServiceImpl implements StudentService {
 
         Optional<Student> studentOpt = studentRepository.findById(id);
         if (studentOpt.isPresent()) {
-            studentRepository.deleteById(id);
+            studentRepository.delete(studentOpt.get());
             return studentOpt;
         } else {
             return Optional.empty();
@@ -52,9 +51,7 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     public List<Student> getStudentWithAge(int age) {
-        return studentRepository.findAll().stream()
-                .filter(student -> student.getAge() == age)
-                .collect(Collectors.toList());
+        return studentRepository.findByAge(age);
     }
 
     private void validateStudent(Student student) {

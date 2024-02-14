@@ -7,7 +7,6 @@ import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class FacultyServiceImpl implements FacultyService {
@@ -46,7 +45,7 @@ public class FacultyServiceImpl implements FacultyService {
 
         Optional<Faculty> facultyOpt = facultyRepository.findById(id);
         if (facultyOpt.isPresent()) {
-            facultyRepository.deleteById(id);
+            facultyRepository.delete(facultyOpt.get());
             return facultyOpt;
         } else {
             return Optional.empty();
@@ -55,9 +54,7 @@ public class FacultyServiceImpl implements FacultyService {
 
     @Override
     public List<Faculty> getFacultyWithColor(Color color) {
-        return facultyRepository.findAll().stream()
-                .filter(faculty -> faculty.getColor() == color)
-                .collect(Collectors.toList());
+        return facultyRepository.findByColor(color);
     }
 
     private void validateFaculty(Faculty faculty) {
@@ -67,8 +64,7 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     private void findAlreadyBeingFacultiesWithThisName(String name) {
-        List<Faculty> byNameLike = facultyRepository.findByNameLike(name);
-        if (!byNameLike.isEmpty()) {
+        if (facultyRepository.existByName(name)) {
             throw new IllegalFacultyFieldsException("This faculty already exist");
         }
     }
