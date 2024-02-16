@@ -8,4 +8,3 @@ public enum Color {
     GREEN_SILVER   // Slytherin
 
 }
-
