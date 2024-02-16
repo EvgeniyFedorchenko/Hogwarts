@@ -19,15 +19,16 @@ public class FacultyController {
     }
 
     @PostMapping
-    public ResponseEntity<Faculty> createFaculty(@RequestBody Faculty faculty) {
-        return ResponseEntity.ok(facultyService.createFaculty(faculty));
+    public Faculty createFaculty(@RequestBody Faculty faculty) {
+        return facultyService.createFaculty(faculty);
     }
 
     @GetMapping(path = "/{id}")
     public ResponseEntity<Faculty> getFaculty(@PathVariable Long id) {
-        return facultyService.getFaculty(id)
+        return ResponseEntity.of(facultyService.getFaculty(id));
+        /*return facultyService.getFaculty(id)
                     .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());
+                    .orElseGet(() -> ResponseEntity.notFound().build());*/
     }
 
     @GetMapping
@@ -37,15 +38,17 @@ public class FacultyController {
 
     @PutMapping
     public ResponseEntity<Faculty> updateFaculty(@RequestBody Faculty faculty) {
-        return facultyService.updateFaculty(faculty)
+        return ResponseEntity.of(facultyService.updateFaculty(faculty));
+        /*return facultyService.updateFaculty(faculty)
                     .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());
+                    .orElseGet(() -> ResponseEntity.notFound().build());*/
     }
 
     @DeleteMapping(path = "/{id}")
     public ResponseEntity<Faculty> deleteFaculty(@PathVariable Long id) {
-        return facultyService.deleteFaculty(id)
+        return ResponseEntity.of(facultyService.deleteFaculty(id));
+        /*return facultyService.deleteFaculty(id)
                     .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());
+                    .orElseGet(() -> ResponseEntity.notFound().build());*/
     }
 }

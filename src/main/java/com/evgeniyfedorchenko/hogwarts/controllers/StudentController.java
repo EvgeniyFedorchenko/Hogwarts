@@ -25,7 +25,7 @@ public class StudentController {
 
     @GetMapping(path = "/{id}")
     public ResponseEntity<Student> getStudent(@PathVariable Long id) {
-        return ResponseEntity.ok(studentService.getStudent(id).get());
+        return ResponseEntity.of(studentService.getStudent(id));
         /*return studentService.getStudent(id)
                     .map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());*/
@@ -38,7 +38,7 @@ public class StudentController {
 
     @PutMapping
     public ResponseEntity<Student> updateStudent(@RequestBody Student student) {
-        return ResponseEntity.ok(studentService.updateStudent(student).get());
+        return ResponseEntity.of(studentService.updateStudent(student));
         /*return studentService.updateStudent(student)
                     .map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());*/
@@ -46,7 +46,7 @@ public class StudentController {
 
     @DeleteMapping(path = "/{id}")
     public ResponseEntity<Student> deleteStudent(@PathVariable Long id) {
-        return ResponseEntity.ok(studentService.deleteStudent(id).get());
+        return ResponseEntity.of(studentService.deleteStudent(id));
         /*return studentService.deleteStudent(id)
                     .map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());*/
