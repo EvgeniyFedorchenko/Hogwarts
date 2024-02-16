@@ -1,9 +1,14 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
+import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalStudentFieldsException;
 import com.evgeniyfedorchenko.hogwarts.models.Student;
-import org.junit.jupiter.api.AfterEach;
+import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,70 +18,88 @@ import java.util.Optional;
 import static com.evgeniyfedorchenko.hogwarts.services.Constants.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class StudentServiceImplTest {
 
-    private final StudentServiceImpl out = new StudentServiceImpl();
+    @Mock
+    private StudentRepository studentRepositoryMock;
+    @InjectMocks
+    private StudentServiceImpl out;
 
-    @BeforeEach
-    public void beforeEach() {
-        out.createStudent(STUDENT_1);
-        out.createStudent(STUDENT_2);
-    }
-
-    @AfterEach
-    public void afterEach() {
-        Long id = 1L;
-        while (out.getStudent(id).isPresent()) {
-            out.deleteStudent(id);
-        }
+    @Test
+    void createStudentPositiveTest() {
+        when(studentRepositoryMock.save(STUDENT_3)).thenReturn(STUDENT_3);
+        Student actual = out.createStudent(STUDENT_3);
+        assertThat(actual).isEqualTo(STUDENT_3);
     }
 
     @Test
-    void createStudentTest() {
-        Student actual = out.createStudent(STUDENT_3);
-        assertThat(actual).isEqualTo(STUDENT_3);
-        assertThat(actual.getId()).isEqualTo(3);
-        assertThat(out.getStudent(3L).get()).isEqualTo(STUDENT_3);
+    void createStudentWithInvalidParamsTest() {
+        assertThatThrownBy(() -> out.createStudent(new Student(null, null, 0, null)))
+                .isInstanceOf(IllegalStudentFieldsException.class);
     }
 
     @Test
     void getStudentPositiveTest() {
+        when(studentRepositoryMock.findById(2L)).thenReturn(Optional.of(STUDENT_2));
         Student actual = out.getStudent(2L).get();
         assertThat(actual).isEqualTo(STUDENT_2);
     }
 
     @Test
-    void getStudentNegativeTest() {
-        Optional<Student> actual = out.getStudent(3L);
-        assertThat(actual).isEqualTo(Optional.empty());
-        assertThatThrownBy(actual::get).isInstanceOf(NoSuchElementException.class);
+    void getStudentWithNonexistentIdTest() {
+        when(studentRepositoryMock.findById(3L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> out.getStudent(3L).get())
+                .isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
     void updateStudentPositiveTest() {
-        Student actual = out.updateStudent(2L, STUDENT_4).get();
-        assertThat(actual).isEqualTo(STUDENT_2);
+        when(studentRepositoryMock.findById(4L)).thenReturn(Optional.of(STUDENT_4));
+        when(studentRepositoryMock.save(STUDENT_4_EDITED)).thenReturn(STUDENT_4_EDITED);
+
+        Student actual = out.updateStudent(STUDENT_4_EDITED).get();
+        assertTrue(actual.equals(STUDENT_4_EDITED));
     }
 
     @Test
-    void updateStudentWithNegativeIdNegativeTest() {
-        Optional<Student> actual = out.updateStudent(-1L, STUDENT_4);
-        assertThat(actual).isEqualTo(Optional.empty());
-        assertThatThrownBy(actual::get).isInstanceOf(NoSuchElementException.class);
+    void updateStudentWithNegativeIdTest() {
+        when(studentRepositoryMock.findById(-1L)).thenReturn(Optional.empty());
+        assertThatThrownBy(
+                () -> out.updateStudent(new Student(-1L, "student", 18, 4L)).get())
+                .isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
-    void updateStudentNonexistentIdNegativeTest() {
-        Optional<Student> actual = out.updateStudent(3L, null);
-        assertThat(actual).isEqualTo(Optional.empty());
-        assertThatThrownBy(actual::get).isInstanceOf(NoSuchElementException.class);
+    void updateStudentWithNonexistentIdTest() {
+        when(studentRepositoryMock.findById(100L)).thenReturn(Optional.empty());
+        assertThatThrownBy(
+                () -> out.updateStudent(new Student(100L, "student", 18, 4L)).get())
+                .isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void updateStudentWithInvalidParamsTest() {
+        assertThatThrownBy(() -> out.updateStudent(new Student(null, null, 0, null)))
+                .isInstanceOf(IllegalStudentFieldsException.class);
     }
 
     @Test
     void deleteStudentTest() {
-        Student actual = out.deleteStudent(2L).get();
-        assertThat(actual).isEqualTo(STUDENT_2);
+        when(studentRepositoryMock.findById(anyLong())).thenReturn(Optional.of(STUDENT_1));
+        assertThat(out.deleteStudent(anyLong()).get()).isEqualTo(STUDENT_1);
+    }
+
+    @Test
+    void deleteStudentWithNonexistentIdTest() {
+        when(studentRepositoryMock.findById(anyLong())).thenReturn(Optional.empty());
+        assertThat(out.deleteStudent(anyLong())).isEqualTo(Optional.empty());
+        assertThatThrownBy(() -> out.deleteStudent(anyLong()).get())
+                .isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
@@ -88,10 +111,10 @@ class StudentServiceImplTest {
 
     @Test
     void getStudentWithAgeTest() {
-        out.createStudent(STUDENT_3);
-        out.createStudent(STUDENT_4);
+        when(studentRepositoryMock.findAll()).thenReturn(TEST_lIST_OF_4_STUDENT);
         List<Student> actual = out.getStudentWithAge(20);
-        List<Student> expected = new ArrayList<>(List.of(STUDENT_1, STUDENT_2));
-        assertThat(actual).isEqualTo(expected);
+        assertThat(actual).isEqualTo(new ArrayList<>(List.of(STUDENT_1, STUDENT_2)))
+                .doesNotContainNull();
+
     }
 }
