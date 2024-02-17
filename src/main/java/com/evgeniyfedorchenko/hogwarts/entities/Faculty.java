@@ -1,8 +1,10 @@
 package com.evgeniyfedorchenko.hogwarts.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.util.Objects;
+import java.util.Set;
 
 @Entity
 @Table(name = "faculties")
@@ -14,6 +16,10 @@ public class Faculty {
 
     private String name;
     private Color color;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "faculty")
+    private Set<Student> students;
 
     public Long getId() {
         return id;
@@ -39,6 +45,14 @@ public class Faculty {
         this.color = color;
     }
 
+    public Set<Student> getStudents() {
+        return students;
+    }
+
+    public void setStudents(Set<Student> students) {
+        this.students = students;
+    }
+
     @Override
     public boolean equals(Object otherFaculty) {
         if (this == otherFaculty) {
@@ -60,6 +74,6 @@ public class Faculty {
 
     @Override
     public String toString() {
-        return "Faculty %d: %s, clr".formatted(id, name);
+        return "Faculty %d: %s, clr, students: %s".formatted(id, name, students);
     }
 }
