@@ -1,4 +1,4 @@
-package com.evgeniyfedorchenko.hogwarts.models;
+package com.evgeniyfedorchenko.hogwarts.entities;
 
 public enum Color {
 
