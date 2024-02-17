@@ -1,6 +1,7 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
-import com.evgeniyfedorchenko.hogwarts.models.Student;
+import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
+import com.evgeniyfedorchenko.hogwarts.entities.Student;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,7 +16,9 @@ public interface StudentService {
 
     Optional<Student> deleteStudent(Long id);
 
-    Optional<List<Student>> findStudentsByExactAge(int age);
+    List<Student> findStudentsByExactAge(int age);
 
-    Optional<List<Student>> findStudentsByAgeBetween(int min, int max);
+    List<Student> findStudentsByAgeBetween(int min, int max);
+
+    Optional<Faculty> findFaculty(Long id);
 }
