@@ -9,11 +9,13 @@ public interface StudentService {
 
     Student createStudent(Student student);
 
-    Optional<Student> getStudent(Long id);
+    Optional<Student> findStudent(Long id);
 
     Optional<Student> updateStudent(Student student);
 
     Optional<Student> deleteStudent(Long id);
 
-    List<Student> getStudentWithAge(int age);
+    Optional<List<Student>> findStudentsByExactAge(int age);
+
+    Optional<List<Student>> findStudentsByAgeBetween(int min, int max);
 }

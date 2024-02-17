@@ -6,7 +6,8 @@ import com.evgeniyfedorchenko.hogwarts.models.Faculty;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 public class FacultyServiceImpl implements FacultyService {
@@ -18,8 +19,9 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     @Override
-    public Faculty createFaculty(Faculty faculty) {
+    public Faculty createFaculty(Faculty faculty) throws IllegalFacultyFieldsException {
         validateFaculty(faculty);
+        findAlreadyBeingFacultiesWithThisName(faculty.getName());
 
         Faculty newFaculty = new Faculty();
         newFaculty.setName(faculty.getName());
@@ -29,7 +31,7 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     @Override
-    public Optional<Faculty> getFaculty(Long id) {
+    public Optional<Faculty> findFaculty(Long id) {
         return facultyRepository.findById(id);
 
     }
@@ -37,7 +39,6 @@ public class FacultyServiceImpl implements FacultyService {
     @Override
     public Optional<Faculty> updateFaculty(Faculty faculty) {
         validateFaculty(faculty);
-        findAlreadyBeingFacultiesWithThisName(faculty.getName());
 
         return facultyRepository.findById(faculty.getId()).isPresent()
                 ? Optional.of(facultyRepository.save(faculty))
@@ -57,10 +58,12 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     @Override
-    public List<Faculty> getFacultyWithColor(Color color) {
-        return facultyRepository.findByColor(color);
+    public Optional<List<Faculty>> findFacultyByColorOrPartName(Color color, String name) {
+        List<Faculty> faculties = facultyRepository.findFacultyByColorOrNameContainsIgnoreCase(color, name);
+        return faculties.isEmpty() ? Optional.empty() : Optional.of(faculties);
     }
 
+    // TODO: 17.02.2024 не забыть добавить новые поля
     private void validateFaculty(Faculty faculty) {
         if (faculty.getName() == null || faculty.getColor() == null) {
             throw new IllegalFacultyFieldsException("Any faculty's field cannot be null");

@@ -1,5 +1,6 @@
 package com.evgeniyfedorchenko.hogwarts.controllers;
 
+import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalFacultyFieldsException;
 import com.evgeniyfedorchenko.hogwarts.models.Color;
 import com.evgeniyfedorchenko.hogwarts.models.Faculty;
 import com.evgeniyfedorchenko.hogwarts.services.FacultyService;
@@ -19,36 +20,32 @@ public class FacultyController {
     }
 
     @PostMapping
-    public Faculty createFaculty(@RequestBody Faculty faculty) {
-        return facultyService.createFaculty(faculty);
+    public ResponseEntity<Faculty> createFaculty(@RequestBody Faculty faculty) {
+        try {     // ???
+            return ResponseEntity.ok(facultyService.createFaculty(faculty));
+        } catch (IllegalFacultyFieldsException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @GetMapping(path = "/{id}")
     public ResponseEntity<Faculty> getFaculty(@PathVariable Long id) {
-        return ResponseEntity.of(facultyService.getFaculty(id));
-        /*return facultyService.getFaculty(id)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());*/
+        return ResponseEntity.of(facultyService.findFaculty(id));
     }
 
     @GetMapping
-    public List<Faculty> getFacultyWithColor(@RequestParam Color color) {
-        return facultyService.getFacultyWithColor(color);
+    public ResponseEntity<List<Faculty>> getFacultyByColorOrPartName(@RequestParam(required = false) Color color,
+                                                                     @RequestParam(required = false) String name) {
+        return ResponseEntity.of(facultyService.findFacultyByColorOrPartName(color, name));
     }
 
     @PutMapping
     public ResponseEntity<Faculty> updateFaculty(@RequestBody Faculty faculty) {
         return ResponseEntity.of(facultyService.updateFaculty(faculty));
-        /*return facultyService.updateFaculty(faculty)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());*/
     }
 
     @DeleteMapping(path = "/{id}")
     public ResponseEntity<Faculty> deleteFaculty(@PathVariable Long id) {
         return ResponseEntity.of(facultyService.deleteFaculty(id));
-        /*return facultyService.deleteFaculty(id)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());*/
     }
 }

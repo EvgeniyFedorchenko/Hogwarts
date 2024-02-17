@@ -25,30 +25,27 @@ public class StudentController {
 
     @GetMapping(path = "/{id}")
     public ResponseEntity<Student> getStudent(@PathVariable Long id) {
-        return ResponseEntity.of(studentService.getStudent(id));
-        /*return studentService.getStudent(id)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());*/
+        return ResponseEntity.of(studentService.findStudent(id));
     }
 
-    @GetMapping
-    public List<Student> getStudentsWithAge(@RequestParam int age) {
-        return studentService.getStudentWithAge(age);
+    @GetMapping(path = "/exact")
+    public ResponseEntity<List<Student>> getStudentsByExactAge(@RequestParam int age) {
+        return ResponseEntity.of(studentService.findStudentsByExactAge(age));
+    }
+
+    @GetMapping(path = "/range")
+    public ResponseEntity<List<Student>> getStudentByAgeBetween(int min, int max) {
+        // TODO: 17.02.2024 вернуть 404 если лист пустой
+        return ResponseEntity.of(studentService.findStudentsByAgeBetween(min, max));
     }
 
     @PutMapping
     public ResponseEntity<Student> updateStudent(@RequestBody Student student) {
         return ResponseEntity.of(studentService.updateStudent(student));
-        /*return studentService.updateStudent(student)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());*/
     }
 
     @DeleteMapping(path = "/{id}")
     public ResponseEntity<Student> deleteStudent(@PathVariable Long id) {
         return ResponseEntity.of(studentService.deleteStudent(id));
-        /*return studentService.deleteStudent(id)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());*/
     }
 }
