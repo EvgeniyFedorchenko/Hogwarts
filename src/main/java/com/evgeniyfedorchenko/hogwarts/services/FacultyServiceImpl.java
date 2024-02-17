@@ -1,9 +1,11 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
-import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalFacultyFieldsException;
-import com.evgeniyfedorchenko.hogwarts.models.Color;
-import com.evgeniyfedorchenko.hogwarts.models.Faculty;
+import com.evgeniyfedorchenko.hogwarts.entities.Student;
+import com.evgeniyfedorchenko.hogwarts.exceptions.InvalidFacultyFieldsException;
+import com.evgeniyfedorchenko.hogwarts.entities.Color;
+import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
+import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,13 +15,16 @@ import java.util.Optional;
 public class FacultyServiceImpl implements FacultyService {
 
     private final FacultyRepository facultyRepository;
+    private final StudentRepository studentRepository;
 
-    public FacultyServiceImpl(FacultyRepository facultyRepository) {
+    public FacultyServiceImpl(FacultyRepository facultyRepository,
+                              StudentRepository studentRepository) {
         this.facultyRepository = facultyRepository;
+        this.studentRepository = studentRepository;
     }
 
     @Override
-    public Faculty createFaculty(Faculty faculty) throws IllegalFacultyFieldsException {
+    public Faculty createFaculty(Faculty faculty) {
         validateFaculty(faculty);
         findAlreadyBeingFacultiesWithThisName(faculty.getName());
 
@@ -58,21 +63,27 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     @Override
-    public Optional<List<Faculty>> findFacultyByColorOrPartName(Color color, String name) {
-        List<Faculty> faculties = facultyRepository.findFacultyByColorOrNameContainsIgnoreCase(color, name);
-        return faculties.isEmpty() ? Optional.empty() : Optional.of(faculties);
+    public List<Faculty> findFacultyByColorOrPartName(Color color, String name) {
+        return facultyRepository.findFacultyByColorOrNameContainsIgnoreCase(color, name);
     }
 
-    // TODO: 17.02.2024 не забыть добавить новые поля
+    @Override
+    public List<Student> findStudents(Long id) {
+        return studentRepository.findByFaculty_Id(id);
+    }
+
     private void validateFaculty(Faculty faculty) {
-        if (faculty.getName() == null || faculty.getColor() == null) {
-            throw new IllegalFacultyFieldsException("Any faculty's field cannot be null");
+        if (faculty.getName() == null) {
+            throw new InvalidFacultyFieldsException("Faculty name cannot be null", "name", faculty.getName());
+        } else if (faculty.getColor() == null) {
+            throw new InvalidFacultyFieldsException(
+                    "Faculty color cannot be null", "color", String.valueOf(faculty.getColor()));
         }
     }
 
     private void findAlreadyBeingFacultiesWithThisName(String name) {
         if (facultyRepository.existsByName(name)) {
-            throw new IllegalFacultyFieldsException("This faculty already exist");
+//            throw new InvalidFacultyFieldsException("This faculty already exist");
         }
     }
 }

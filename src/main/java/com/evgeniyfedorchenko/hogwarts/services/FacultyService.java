@@ -1,7 +1,8 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
-import com.evgeniyfedorchenko.hogwarts.models.Color;
-import com.evgeniyfedorchenko.hogwarts.models.Faculty;
+import com.evgeniyfedorchenko.hogwarts.entities.Color;
+import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
+import com.evgeniyfedorchenko.hogwarts.entities.Student;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,5 +17,7 @@ public interface FacultyService {
 
     Optional<Faculty> deleteFaculty(Long id);
 
-    Optional<List<Faculty>> findFacultyByColorOrPartName(Color color, String name);
+    List<Faculty> findFacultyByColorOrPartName(Color color, String name);
+
+    List<Student> findStudents(Long id);
 }
