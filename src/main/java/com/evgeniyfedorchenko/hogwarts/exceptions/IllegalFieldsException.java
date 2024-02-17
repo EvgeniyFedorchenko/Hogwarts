@@ -1,10 +1,11 @@
 package com.evgeniyfedorchenko.hogwarts.exceptions;
 
-public abstract class InvalidFieldsException extends RuntimeException {
+public abstract class IllegalFieldsException extends RuntimeException {
 
     private final String paramName;
     private final String invalidValue;
-    public InvalidFieldsException(String message, String paramName, String invalidValue) {
+
+    public IllegalFieldsException(String message, String paramName, String invalidValue) {
         super(message);
         this.paramName = paramName;
         this.invalidValue = invalidValue;

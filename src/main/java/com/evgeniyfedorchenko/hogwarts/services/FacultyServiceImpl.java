@@ -1,7 +1,8 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
-import com.evgeniyfedorchenko.hogwarts.exceptions.InvalidFacultyFieldsException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.FacultyAlreadyExistsException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalFacultyFieldsException;
 import com.evgeniyfedorchenko.hogwarts.entities.Color;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
@@ -74,16 +75,16 @@ public class FacultyServiceImpl implements FacultyService {
 
     private void validateFaculty(Faculty faculty) {
         if (faculty.getName() == null) {
-            throw new InvalidFacultyFieldsException("Faculty name cannot be null", "name", faculty.getName());
+            throw new IllegalFacultyFieldsException("Faculty name cannot be null", "name", faculty.getName());
         } else if (faculty.getColor() == null) {
-            throw new InvalidFacultyFieldsException(
+            throw new IllegalFacultyFieldsException(
                     "Faculty color cannot be null", "color", String.valueOf(faculty.getColor()));
         }
     }
 
     private void findAlreadyBeingFacultiesWithThisName(String name) {
         if (facultyRepository.existsByName(name)) {
-//            throw new InvalidFacultyFieldsException("This faculty already exist");
+            throw new FacultyAlreadyExistsException("Such a faculty already exists");
         }
     }
 }

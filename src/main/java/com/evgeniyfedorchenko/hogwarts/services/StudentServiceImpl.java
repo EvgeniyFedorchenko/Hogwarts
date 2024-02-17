@@ -3,8 +3,7 @@ package com.evgeniyfedorchenko.hogwarts.services;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.FacultyNotFoundException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.InvalidStudentFieldsException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.StudentNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalStudentFieldsException;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.stereotype.Service;
@@ -54,7 +53,7 @@ public class StudentServiceImpl implements StudentService {
             return Optional.of(studentRepository.save(oldStudent));
         }
         else {
-            throw new StudentNotFoundException(student.getId());
+            return Optional.empty();
         }
     }
 
@@ -91,11 +90,11 @@ public class StudentServiceImpl implements StudentService {
 
     private void validateStudent(Student student) {
         if (student.getName() == null) {
-            throw new InvalidStudentFieldsException(
+            throw new IllegalStudentFieldsException(
                     "Student name cannot be null or empty", "name", student.getName());
         }
         if (student.getAge() == 0) {
-            throw new InvalidStudentFieldsException(
+            throw new IllegalStudentFieldsException(
                     "Student age cannot be equal zero", "age", String.valueOf(student.getAge()));
         }
         if (student.getFaculty() != null && student.getFaculty().getId() != null) {
