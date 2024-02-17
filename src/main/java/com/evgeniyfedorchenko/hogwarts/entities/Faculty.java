@@ -1,13 +1,11 @@
-package com.evgeniyfedorchenko.hogwarts.models;
+package com.evgeniyfedorchenko.hogwarts.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 import java.util.Objects;
 
 @Entity
+@Table(name = "faculties")
 public class Faculty {
 
     @Id
@@ -16,16 +14,6 @@ public class Faculty {
 
     private String name;
     private Color color;
-
-    public Faculty() {
-
-    }
-
-    public Faculty(Long id, String name, Color color) {
-        this.id = id;
-        this.name = name;
-        this.color = color;
-    }
 
     public Long getId() {
         return id;
@@ -68,5 +56,10 @@ public class Faculty {
     @Override
     public int hashCode() {
         return Objects.hash(id, name, color);
+    }
+
+    @Override
+    public String toString() {
+        return "Faculty %d: %s, clr".formatted(id, name);
     }
 }

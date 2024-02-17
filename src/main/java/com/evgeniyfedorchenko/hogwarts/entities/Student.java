@@ -1,13 +1,12 @@
-package com.evgeniyfedorchenko.hogwarts.models;
+package com.evgeniyfedorchenko.hogwarts.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+
+import jakarta.persistence.*;
 
 import java.util.Objects;
 
 @Entity
+@Table(name = "students")
 public class Student {
 
     @Id
@@ -16,18 +15,10 @@ public class Student {
 
     private String name;
     private int age;
-    private Long facultyId;
 
-    public Student() {
-
-    }
-
-    public Student(Long id, String name, int age, Long facultyId) {
-        this.id = id;
-        this.name = name;
-        this.age = age;
-        this.facultyId = facultyId;
-    }
+    @ManyToOne
+    @JoinColumn(name = "faculty_id")
+    private Faculty faculty;
 
     public Long getId() {
         return id;
@@ -53,12 +44,12 @@ public class Student {
         this.age = age;
     }
 
-    public Long getFacultyId() {
-        return facultyId;
+    public Faculty getFaculty() {
+        return faculty;
     }
 
-    public void setFacultyId(Long facultyId) {
-        this.facultyId = facultyId;
+    public void setFaculty(Faculty facultyId) {
+        this.faculty = facultyId;
     }
 
     @Override
@@ -76,5 +67,10 @@ public class Student {
     @Override
     public int hashCode() {
         return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "ID-%d: %s, %dy.o. (%s)".formatted(id, name, age, faculty.getName());
     }
 }
