@@ -32,6 +32,7 @@ public class FacultyServiceImpl implements FacultyService {
         Faculty newFaculty = new Faculty();
         newFaculty.setName(faculty.getName());
         newFaculty.setColor(faculty.getColor());
+        newFaculty.setStudents(faculty.getStudents());
 
         return facultyRepository.save(newFaculty);
     }
@@ -45,18 +46,17 @@ public class FacultyServiceImpl implements FacultyService {
     @Override
     public Optional<Faculty> updateFaculty(Faculty faculty) {
         validateFaculty(faculty);
-        List<Faculty> alreadyBeingFaculty =
-                facultyRepository.findFacultyByColorOrNameContainsIgnoreCase(null, faculty.getName());
+        if (faculty.getId() == null || faculty.getId() <= 0L) {
+            return Optional.empty();
+        }
+        Faculty alreadyBeingFaculty = facultyRepository.findFirstByName(faculty.getName());
+        if (alreadyBeingFaculty != null && alreadyBeingFaculty.getId().equals(faculty.getId())) {
 
-        // Проверка, что факультета с новым именем еще нет в БД
-        if (!alreadyBeingFaculty.isEmpty() && !alreadyBeingFaculty.get(0).getId().equals(faculty.getId())) {
-            return Optional.empty();
+            if (facultyRepository.findById(faculty.getId()).isPresent()) {
+                return Optional.of(facultyRepository.save(faculty));
+            }
         }
-        if (facultyRepository.findById(faculty.getId()).isPresent()) {
-            return Optional.of(facultyRepository.save(faculty));
-        } else {
-            return Optional.empty();
-        }
+        return Optional.empty();
     }
 
     @Override
@@ -72,8 +72,8 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     @Override
-    public List<Faculty> findFacultyByColorOrPartName(Color color, String name) {
-        return facultyRepository.findFacultyByColorOrNameContainsIgnoreCase(color, name);
+    public List<Faculty> findFacultyByColorOrPartName(String colorOrName) {
+        return facultyRepository.findFacultyByColorOrNameContainsIgnoreCase(Color.valueOf(colorOrName), colorOrName);
     }
 
     @Override

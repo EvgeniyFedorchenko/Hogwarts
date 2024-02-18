@@ -22,6 +22,6 @@ public class HogwartsExceptionHandler {
 
     @ExceptionHandler(FacultyAlreadyExistsException.class)
     public ResponseEntity<String> handleFacultyAlreadyExistsException(FacultyAlreadyExistsException e) {
-        return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body(e.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
     }
 }
