@@ -1,10 +1,10 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
+import com.evgeniyfedorchenko.hogwarts.entities.Color;
+import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.FacultyAlreadyExistsException;
 import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalFacultyFieldsException;
-import com.evgeniyfedorchenko.hogwarts.entities.Color;
-import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.stereotype.Service;
@@ -45,10 +45,18 @@ public class FacultyServiceImpl implements FacultyService {
     @Override
     public Optional<Faculty> updateFaculty(Faculty faculty) {
         validateFaculty(faculty);
+        List<Faculty> alreadyBeingFaculty =
+                facultyRepository.findFacultyByColorOrNameContainsIgnoreCase(null, faculty.getName());
 
-        return facultyRepository.findById(faculty.getId()).isPresent()
-                ? Optional.of(facultyRepository.save(faculty))
-                : Optional.empty();
+        // Проверка, что факультета с новым именем еще нет в БД
+        if (!alreadyBeingFaculty.isEmpty() && !alreadyBeingFaculty.get(0).getId().equals(faculty.getId())) {
+            return Optional.empty();
+        }
+        if (facultyRepository.findById(faculty.getId()).isPresent()) {
+            return Optional.of(facultyRepository.save(faculty));
+        } else {
+            return Optional.empty();
+        }
     }
 
     @Override
