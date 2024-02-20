@@ -2,9 +2,11 @@ package com.evgeniyfedorchenko.hogwarts.services;
 
 import com.evgeniyfedorchenko.hogwarts.entities.Color;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
+import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.FacultyAlreadyExistsException;
 import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalFacultyFieldsException;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
+import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,13 +14,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashSet;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
 
 import static com.evgeniyfedorchenko.hogwarts.services.Constants.*;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -28,6 +27,8 @@ class FacultyServiceImplTest {
 
     @Mock
     private FacultyRepository facultyRepositoryMock;
+    @Mock
+    private StudentRepository studentRepository;
     @InjectMocks
     private FacultyServiceImpl out;
 
@@ -38,28 +39,32 @@ class FacultyServiceImplTest {
 
     @Test
     void createFacultyPositiveTest() {
-        when(facultyRepositoryMock.existsByName(FACULTY_3.getName())).thenReturn(false);
 
-        Faculty faculty3ForSaveMethod = new Faculty();
-        faculty3ForSaveMethod.setName(FACULTY_3.getName());
-        faculty3ForSaveMethod.setColor(FACULTY_3.getColor());
-        faculty3ForSaveMethod.setStudents(FACULTY_3.getStudents());
-        when(facultyRepositoryMock.save(faculty3ForSaveMethod)).thenReturn(FACULTY_3);
+        Faculty incompleteFaculty = new Faculty();
+        incompleteFaculty.setName(FACULTY_3.getName());
+        incompleteFaculty.setColor(FACULTY_3.getColor());
+        incompleteFaculty.setStudents(FACULTY_3.getStudents());
+
+        when(facultyRepositoryMock.existsByName(FACULTY_3.getName())).thenReturn(false);
+        when(facultyRepositoryMock.save(incompleteFaculty)).thenReturn(FACULTY_3);
 
         Faculty actual = out.createFaculty(FACULTY_3);
-        actual.setId(FACULTY_3.getId());
-        actual.setStudents(FACULTY_3.getStudents());
-
         assertThat(actual).isEqualTo(FACULTY_3);
     }
 
     @Test
-    void createFacultyWithInvalidParamsTest() {
-        Faculty invalidFaculty = new Faculty();
-        invalidFaculty.setId(null);
+    void createFacultyWithoutNameTest() {
+        Faculty invalidFaculty = FACULTY_1;
         invalidFaculty.setName(null);
+
+        assertThatThrownBy(() -> out.createFaculty(invalidFaculty))
+                .isInstanceOf(IllegalFacultyFieldsException.class);
+    }
+
+    @Test
+    void createFacultyWithoutColorTest() {
+        Faculty invalidFaculty = FACULTY_1;
         invalidFaculty.setColor(null);
-        invalidFaculty.setStudents(null);
 
         assertThatThrownBy(() -> out.createFaculty(invalidFaculty))
                 .isInstanceOf(IllegalFacultyFieldsException.class);
@@ -104,7 +109,7 @@ class FacultyServiceImplTest {
         invalidFaculty.setId(-1L);
         invalidFaculty.setName("faculty");
         invalidFaculty.setColor(Color.RED_GOLD);
-        invalidFaculty.setStudents(new HashSet<>());
+        invalidFaculty.setStudents(new ArrayList<>());
 
         assertThatThrownBy(
                 () -> out.updateFaculty(invalidFaculty.getId(), invalidFaculty).get())
@@ -117,7 +122,7 @@ class FacultyServiceImplTest {
         invalidFaculty.setId(100L);
         invalidFaculty.setName("faculty");
         invalidFaculty.setColor(Color.RED_GOLD);
-        invalidFaculty.setStudents(new HashSet<>());
+        invalidFaculty.setStudents(new ArrayList<>());
 
         when(facultyRepositoryMock.findById(invalidFaculty.getId())).thenReturn(Optional.empty());
 
@@ -145,7 +150,7 @@ class FacultyServiceImplTest {
         invalidFaculty.setId(1L);
         invalidFaculty.setName("Hufflepuff");
         invalidFaculty.setColor(Color.RED_GOLD);
-        invalidFaculty.setStudents(new HashSet<>());
+        invalidFaculty.setStudents(new ArrayList<>());
 
         when(facultyRepositoryMock.findById(invalidFaculty.getId()))
                 .thenReturn(Optional.of(invalidFaculty));
@@ -156,7 +161,40 @@ class FacultyServiceImplTest {
     }
 
     @Test
-    void deleteFacultyTest() {
+    void findStudentsTest() {
+        when(studentRepository.findByFaculty_Id(FACULTY_1.getId())).thenReturn(FACULTY_1.getStudents());
+        List<Student> actual = out.findStudents(FACULTY_1.getId());
+        assertThat(actual).doesNotContainNull()
+                .isEqualTo(FACULTY_1.getStudents());
+    }
+
+    @Test
+    void findFacultyByColor() {
+        Color color = Color.RED_GOLD;
+        String partName = "";   // Параметр необязательный, defaultValue = "";
+        when(facultyRepositoryMock.findFacultyByColorAndNameContainsIgnoreCase(color, partName))
+                .thenReturn(List.of(FACULTY_1));
+
+        List<Faculty> actual = out.findFacultyByColorOrPartName(color, partName);
+        assertThat(actual).doesNotContainNull()
+                .containsOnly(FACULTY_1);
+    }
+
+    @Test
+    void findFacultyByPartName() {
+
+        Color color = null;   // Параметр не обязательный, если что, Spring сюда null присвоит
+        String partName = FACULTY_1.getName().toLowerCase().substring(1);
+        when(facultyRepositoryMock.findByNameContainsIgnoreCase(partName))
+                .thenReturn(List.of(FACULTY_1));
+
+        List<Faculty> actual = out.findFacultyByColorOrPartName(color, partName);
+        assertThat(actual).doesNotContainNull()
+                .containsOnly(FACULTY_1);
+    }
+
+    @Test
+    void deleteFacultyPositiveTest() {
         when(facultyRepositoryMock.findById(anyLong())).thenReturn(Optional.of(FACULTY_1));
         assertThat(out.deleteFaculty(anyLong()).get()).isEqualTo(FACULTY_1);
     }
@@ -175,14 +213,4 @@ class FacultyServiceImplTest {
         assertThat(actual).isEqualTo(Optional.empty());
         assertThatThrownBy(actual::get).isInstanceOf(NoSuchElementException.class);
     }
-
-    /*@Test
-    void getFacultyWithAgeTest() {
-        when(facultyRepositoryMock.findFacultyByColorAndNameContainsIgnoreCase(Color.BLUE_BRONZE);
-                .thenReturn(new ArrayList<>(List.of(FACULTY_3)));
-        List<Faculty> actual = out.findFacultyByColorOrPartName(Color.BLUE_BRONZE, null);
-        assertThat(actual).isEqualTo(new ArrayList<>(List.of(FACULTY_3)))
-                .doesNotContainNull();
-
-    }*/
 }
