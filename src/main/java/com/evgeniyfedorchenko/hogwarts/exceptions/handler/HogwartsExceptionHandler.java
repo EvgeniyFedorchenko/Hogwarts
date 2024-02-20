@@ -12,9 +12,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class HogwartsExceptionHandler {
 
 
-    /* Даже поймав FacultyNotFound мы все равно возвращаем код 400 т.к. это исключение может возникнуть только
-       при валидации студента, а это значит, что параметры студента были переданы невалидные - BAD_REQUEST */
-
+    /* Даже поймав FacultyNotFound мы все равно возвращаем статус BAD_REQUEST т.к. это исключение может возникнуть
+       только при валидации студента, а это значит, что параметры студента были переданы невалидные - BAD_REQUEST */
     @ExceptionHandler({IllegalFieldsException.class, FacultyNotFoundException.class})
     public ResponseEntity<String> handleInvalidFieldsException(IllegalFieldsException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());

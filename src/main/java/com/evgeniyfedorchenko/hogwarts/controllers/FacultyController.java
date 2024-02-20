@@ -38,14 +38,8 @@ public class FacultyController {
     @GetMapping
     @Operation(summary = "Get faculties by color or part of name")
     public List<Faculty> getFacultyByColorOrPartName(@RequestParam(required = false) Color color,
-                                                     @RequestParam(required = false) String name) {
-        return facultyService.findFacultyByColorOrPartName(color, name);
-    }
-
-    @PutMapping
-    @Operation(summary = "Update existing faculty")
-    public ResponseEntity<Faculty> updateFaculty(@RequestBody Faculty faculty) {
-        return ResponseEntity.of(facultyService.updateFaculty(faculty));
+                                                     @RequestParam(required = false, defaultValue = "") String namePart) {
+        return facultyService.findFacultyByColorOrPartName(color, namePart);
     }
 
     @GetMapping(path = "/{id}/students")
@@ -54,8 +48,14 @@ public class FacultyController {
         return facultyService.findStudents(id);
     }
 
+    @PutMapping(path = "/{id}")
+    @Operation(summary = "Update existing faculty")
+    public ResponseEntity<Faculty> updateFaculty(@PathVariable Long id, @RequestBody Faculty faculty) {
+        return ResponseEntity.of(facultyService.updateFaculty(id, faculty));
+    }
+
     @DeleteMapping(path = "/{id}")
-    @Operation(summary = "Delete the exist faculty")
+    @Operation(summary = "Delete the existing faculty")
     public ResponseEntity<Faculty> deleteFaculty(@PathVariable Long id) {
         return ResponseEntity.of(facultyService.deleteFaculty(id));
     }

@@ -34,16 +34,11 @@ public class StudentController {
         return ResponseEntity.of(studentService.findStudent(id));
     }
 
-    @GetMapping(params = "age")
-    @Operation(summary = "Get students by exact ages")
-    public List<Student> getStudentsByExactAge(@RequestParam int age) {
-        return studentService.findStudentsByExactAge(age);
-    }
-
-    @GetMapping(params = {"minAge", "maxAge"})
-    @Operation(summary = "Get students by range ages")
-    public List<Student> getStudentByAgeBetween(@RequestParam int minAge, @RequestParam int maxAge) {
-        return studentService.findStudentsByAgeBetween(minAge, maxAge);
+    @GetMapping(params = {"age", "upTo"})
+    @Operation(summary = "Enter one value for an exact-match search and two values for a range search")
+    public List<Student> getStudentByAgeBetween(@RequestParam int age,
+                                                @RequestParam(required = false, defaultValue = "-1") int upTo) {
+        return studentService.findStudentsByAgeBetween(age, upTo);
     }
 
     @GetMapping(path = "/{id}/faculty")
@@ -52,14 +47,14 @@ public class StudentController {
         return ResponseEntity.of(studentService.findFaculty(id));
     }
 
-    @PutMapping
-    @Operation(summary = "Update exist student")
-    public ResponseEntity<Student> updateStudent(@RequestBody Student student) {
-        return ResponseEntity.of(studentService.updateStudent(student));
+    @PutMapping(path = "/{id}")
+    @Operation(summary = "Update existing student")
+    public ResponseEntity<Student> updateStudent(@PathVariable Long id, @RequestBody Student student) {
+        return ResponseEntity.of(studentService.updateStudent(id, student));
     }
 
     @DeleteMapping(path = "/{id}")
-    @Operation(summary = "Delete exist student")
+    @Operation(summary = "Delete existing student")
     public ResponseEntity<Student> deleteStudent(@PathVariable Long id) {
         return ResponseEntity.of(studentService.deleteStudent(id));
     }

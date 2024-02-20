@@ -81,9 +81,12 @@ public class FacultyServiceImpl implements FacultyService {
         }
     }
 
+    // Для того чтобы можно было искать вычитанием результатов, а не сложением
     @Override
     public List<Faculty> findFacultyByColorOrPartName(Color color, String namePart) {
-        return facultyRepository.findFacultyByColorOrNameContainsIgnoreCase(color, namePart);
+        return color == null
+                ? facultyRepository.findByNameContainsIgnoreCase(namePart)
+                : facultyRepository.findFacultyByColorAndNameContainsIgnoreCase(color, namePart);
     }
 
     @Override
