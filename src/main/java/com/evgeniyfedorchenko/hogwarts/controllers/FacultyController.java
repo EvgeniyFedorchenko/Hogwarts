@@ -1,13 +1,18 @@
 package com.evgeniyfedorchenko.hogwarts.controllers;
 
-import com.evgeniyfedorchenko.hogwarts.models.Color;
-import com.evgeniyfedorchenko.hogwarts.models.Faculty;
+import com.evgeniyfedorchenko.hogwarts.entities.Color;
+import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
+import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.services.FacultyService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
+@Tag(name = "Faculties")
 @RestController
 @RequestMapping(path = "/faculties")
 public class FacultyController {
@@ -19,33 +24,39 @@ public class FacultyController {
     }
 
     @PostMapping
-    public ResponseEntity<Faculty> createFaculty(@RequestBody Faculty faculty) {
-        return ResponseEntity.ok(facultyService.createFaculty(faculty));
+    @Operation(summary = "Creating a faculty")
+    public Faculty createFaculty(@RequestBody Faculty faculty) {
+        return facultyService.createFaculty(faculty);
     }
 
     @GetMapping(path = "/{id}")
+    @Operation(summary = "Get existing faculty")
     public ResponseEntity<Faculty> getFaculty(@PathVariable Long id) {
-        return facultyService.getFaculty(id)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.of(facultyService.findFaculty(id));
     }
 
     @GetMapping
-    public List<Faculty> getFacultyWithColor(@RequestParam Color color) {
-        return facultyService.getFacultyWithColor(color);
+    @Operation(summary = "Get faculties by color or part of name")
+    public List<Faculty> getFacultyByColorOrPartName(@RequestParam(required = false) Color color,
+                                                     @RequestParam(required = false, defaultValue = "") String namePart) {
+        return facultyService.findFacultyByColorOrPartName(color, namePart);
     }
 
-    @PutMapping
-    public ResponseEntity<Faculty> updateFaculty(@RequestBody Faculty faculty) {
-        return facultyService.updateFaculty(faculty)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());
+    @GetMapping(path = "/{id}/students")
+    @Operation(summary = "Get all students of faculty")
+    public List<Student> getStudentsOfFaculty(@PathVariable Long id) {
+        return facultyService.findStudents(id);
+    }
+
+    @PutMapping(path = "/{id}")
+    @Operation(summary = "Update existing faculty")
+    public ResponseEntity<Faculty> updateFaculty(@PathVariable Long id, @RequestBody Faculty faculty) {
+        return ResponseEntity.of(facultyService.updateFaculty(id, faculty));
     }
 
     @DeleteMapping(path = "/{id}")
+    @Operation(summary = "Delete the existing faculty")
     public ResponseEntity<Faculty> deleteFaculty(@PathVariable Long id) {
-        return facultyService.deleteFaculty(id)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.of(facultyService.deleteFaculty(id));
     }
 }

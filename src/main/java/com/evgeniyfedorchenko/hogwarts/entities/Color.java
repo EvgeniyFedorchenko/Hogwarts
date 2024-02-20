@@ -1,4 +1,4 @@
-package com.evgeniyfedorchenko.hogwarts.models;
+package com.evgeniyfedorchenko.hogwarts.entities;
 
 public enum Color {
 
@@ -8,4 +8,3 @@ public enum Color {
     GREEN_SILVER   // Slytherin
 
 }
-

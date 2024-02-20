@@ -1,13 +1,17 @@
 package com.evgeniyfedorchenko.hogwarts.controllers;
 
-import com.evgeniyfedorchenko.hogwarts.models.Student;
+import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
+import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.services.StudentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 
+@Tag(name = "Students")
 @RestController
 @RequestMapping(path = "/students")
 public class StudentController {
@@ -19,36 +23,39 @@ public class StudentController {
     }
 
     @PostMapping
+    @Operation(summary = "Creating a student")
     public Student createStudent(@RequestBody Student student) {
         return studentService.createStudent(student);
     }
 
     @GetMapping(path = "/{id}")
+    @Operation(summary = "Get existing student")
     public ResponseEntity<Student> getStudent(@PathVariable Long id) {
-        return ResponseEntity.ok(studentService.getStudent(id).get());
-        /*return studentService.getStudent(id)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());*/
+        return ResponseEntity.of(studentService.findStudent(id));
     }
 
-    @GetMapping
-    public List<Student> getStudentsWithAge(@RequestParam int age) {
-        return studentService.getStudentWithAge(age);
+    @GetMapping(params = {"age", "upTo"})
+    @Operation(summary = "Enter one value for an exact-match search and two values for a range search")
+    public List<Student> getStudentByAgeBetween(@RequestParam int age,
+                                                @RequestParam(required = false, defaultValue = "-1") int upTo) {
+        return studentService.findStudentsByAgeBetween(age, upTo);
     }
 
-    @PutMapping
-    public ResponseEntity<Student> updateStudent(@RequestBody Student student) {
-        return ResponseEntity.ok(studentService.updateStudent(student).get());
-        /*return studentService.updateStudent(student)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());*/
+    @GetMapping(path = "/{id}/faculty")
+    @Operation(summary = "Get faculty of existing student")
+    public ResponseEntity<Faculty> getFacultyOfStudent(@PathVariable Long id) {
+        return ResponseEntity.of(studentService.findFaculty(id));
+    }
+
+    @PutMapping(path = "/{id}")
+    @Operation(summary = "Update existing student")
+    public ResponseEntity<Student> updateStudent(@PathVariable Long id, @RequestBody Student student) {
+        return ResponseEntity.of(studentService.updateStudent(id, student));
     }
 
     @DeleteMapping(path = "/{id}")
+    @Operation(summary = "Delete existing student")
     public ResponseEntity<Student> deleteStudent(@PathVariable Long id) {
-        return ResponseEntity.ok(studentService.deleteStudent(id).get());
-        /*return studentService.deleteStudent(id)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());*/
+        return ResponseEntity.of(studentService.deleteStudent(id));
     }
 }

@@ -1,31 +1,26 @@
-package com.evgeniyfedorchenko.hogwarts.models;
+package com.evgeniyfedorchenko.hogwarts.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 
+import java.util.List;
 import java.util.Objects;
 
 @Entity
+@Table(name = "faculties")
 public class Faculty {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true)
     private String name;
     private Color color;
 
-    public Faculty() {
-
-    }
-
-    public Faculty(Long id, String name, Color color) {
-        this.id = id;
-        this.name = name;
-        this.color = color;
-    }
+    @JsonIgnore
+    @OneToMany(mappedBy = "faculty")
+    private List<Student> students;
 
     public Long getId() {
         return id;
@@ -51,6 +46,14 @@ public class Faculty {
         this.color = color;
     }
 
+    public List<Student> getStudents() {
+        return students;
+    }
+
+    public void setStudents(List<Student> students) {
+        this.students = students;
+    }
+
     @Override
     public boolean equals(Object otherFaculty) {
         if (this == otherFaculty) {
@@ -68,5 +71,10 @@ public class Faculty {
     @Override
     public int hashCode() {
         return Objects.hash(id, name, color);
+    }
+
+    @Override
+    public String toString() {
+        return "Faculty %d: %s, clr, students: %s".formatted(id, name, students);
     }
 }
