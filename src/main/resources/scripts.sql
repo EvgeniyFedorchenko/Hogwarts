@@ -4,7 +4,7 @@
 -- Получить всех студентов, у которых возраст меньше идентификатора.
 -- Получить всех студентов упорядоченных по возрасту.
 
-SELECT * FROM students WHERE age > 10 AND age < 20;
+SELECT * FROM students BETWEEN 10 and 20;
 
 SELECT name FROM students;
 
