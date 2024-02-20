@@ -81,7 +81,7 @@ public class FacultyServiceImpl implements FacultyService {
         }
     }
 
-    // Для того чтобы можно было искать вычитанием результатов, а не сложением
+    // Для того чтобы можно было искать по совпадению хотя бы одного параметра
     @Override
     public List<Faculty> findFacultyByColorOrPartName(Color color, String namePart) {
         return color == null

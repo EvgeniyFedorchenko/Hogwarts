@@ -95,7 +95,7 @@ public class StudentServiceImpl implements StudentService {
             throw new IllegalStudentFieldsException(
                     "Student name cannot be null or empty", "name", student.getName());
         }
-        if (student.getAge() == 0) {
+        if (student.getAge() <= 0) {
             throw new IllegalStudentFieldsException(
                     "Student age cannot be equal zero", "age", String.valueOf(student.getAge()));
         }

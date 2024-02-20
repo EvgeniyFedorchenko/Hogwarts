@@ -3,8 +3,8 @@ package com.evgeniyfedorchenko.hogwarts.entities;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 @Entity
 @Table(name = "faculties")
@@ -20,7 +20,7 @@ public class Faculty {
 
     @JsonIgnore
     @OneToMany(mappedBy = "faculty")
-    private Set<Student> students;
+    private List<Student> students;
 
     public Long getId() {
         return id;
@@ -46,11 +46,11 @@ public class Faculty {
         this.color = color;
     }
 
-    public Set<Student> getStudents() {
+    public List<Student> getStudents() {
         return students;
     }
 
-    public void setStudents(Set<Student> students) {
+    public void setStudents(List<Student> students) {
         this.students = students;
     }
 
