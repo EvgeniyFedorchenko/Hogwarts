@@ -41,18 +41,23 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public Optional<Student> updateStudent(Student student) {
+    public Optional<Student> updateStudent(Long id, Student student) {
         validateStudent(student);
-        Optional<Student> studentOpt = studentRepository.findById(student.getId());
-        if (studentOpt.isPresent()) {
-            Student oldStudent = studentOpt.get();
+
+        Optional<Student> studentById = studentRepository.findById(id);
+        if (id <= 0L || studentById.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (student.getFaculty() != null && student.getFaculty().getId() != null) {
+            Student oldStudent = studentById.get();
             oldStudent.setName(student.getName());
             oldStudent.setAge(student.getAge());
-            oldStudent.setFaculty(student.getFaculty());
+            oldStudent.setFaculty(facultyRepository.findById(student.getFaculty().getId())
+                    .orElseThrow(() -> new FacultyNotFoundException(student.getFaculty().getId())));
 
             return Optional.of(studentRepository.save(oldStudent));
-        }
-        else {
+        } else {
             return Optional.empty();
         }
     }
@@ -76,9 +81,6 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     public List<Student> findStudentsByAgeBetween(int min, int max) {
-        if (max == 0) {
-            max = Integer.MAX_VALUE;
-        }
         return studentRepository.findByAgeBetween(min, max);
     }
 
@@ -96,10 +98,6 @@ public class StudentServiceImpl implements StudentService {
         if (student.getAge() == 0) {
             throw new IllegalStudentFieldsException(
                     "Student age cannot be equal zero", "age", String.valueOf(student.getAge()));
-        }
-        if (student.getFaculty() != null && student.getFaculty().getId() != null) {
-            facultyRepository.findById(student.getFaculty().getId())
-                    .orElseThrow(() -> new FacultyNotFoundException(student.getFaculty().getId()));
         }
     }
 }

@@ -13,11 +13,11 @@ public interface FacultyService {
 
     Optional<Faculty> findFaculty(Long id);
 
-    Optional<Faculty> updateFaculty(Faculty faculty);
+    Optional<Faculty> updateFaculty(Long id, Faculty faculty);
 
     Optional<Faculty> deleteFaculty(Long id);
 
-    List<Faculty> findFacultyByColorOrPartName(Color color, String name);
+    List<Faculty> findFacultyByColorOrPartName(Color color, String namePart);
 
     List<Student> findStudents(Long id);
 }

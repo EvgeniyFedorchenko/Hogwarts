@@ -27,8 +27,10 @@ public class FacultyServiceImpl implements FacultyService {
     @Override
     public Faculty createFaculty(Faculty faculty) {
         validateFaculty(faculty);
-        findAlreadyBeingFacultiesWithThisName(faculty.getName());
 
+        if (facultyRepository.existsByName(faculty.getName())) {
+            throw new FacultyAlreadyExistsException("Such a faculty already exists");
+        }
         Faculty newFaculty = new Faculty();
         newFaculty.setName(faculty.getName());
         newFaculty.setColor(faculty.getColor());
@@ -44,19 +46,27 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     @Override
-    public Optional<Faculty> updateFaculty(Faculty faculty) {
+    public Optional<Faculty> updateFaculty(Long id, Faculty faculty) {
         validateFaculty(faculty);
-        if (faculty.getId() == null || faculty.getId() <= 0L) {
+
+        Optional<Faculty> byId = facultyRepository.findById(id);
+        if (id <= 0L || byId.isEmpty()) {
             return Optional.empty();
         }
-        Faculty alreadyBeingFaculty = facultyRepository.findFirstByName(faculty.getName());
-        if (alreadyBeingFaculty != null && alreadyBeingFaculty.getId().equals(faculty.getId())) {
 
-            if (facultyRepository.findById(faculty.getId()).isPresent()) {
-                return Optional.of(facultyRepository.save(faculty));
-            }
+        // Если факультет с таким именем уже есть в БД и это другой факультет (у него другой id) - прерываем метод
+        Faculty firstByName = facultyRepository.findFirstByName(faculty.getName());
+        if (firstByName != null && !id.equals(firstByName.getId())) {
+            return Optional.empty();
+
+            // Иначе - берем факультет и меняем его
+        } else {
+            Faculty oldFaculty = byId.get();
+            oldFaculty.setName(faculty.getName());
+            oldFaculty.setColor(faculty.getColor());
+            oldFaculty.setStudents(faculty.getStudents());
+            return Optional.of(facultyRepository.save(oldFaculty));
         }
-        return Optional.empty();
     }
 
     @Override
@@ -72,8 +82,8 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     @Override
-    public List<Faculty> findFacultyByColorOrPartName(String colorOrName) {
-        return facultyRepository.findFacultyByColorOrNameContainsIgnoreCase(Color.valueOf(colorOrName), colorOrName);
+    public List<Faculty> findFacultyByColorOrPartName(Color color, String namePart) {
+        return facultyRepository.findFacultyByColorOrNameContainsIgnoreCase(color, namePart);
     }
 
     @Override
@@ -83,16 +93,11 @@ public class FacultyServiceImpl implements FacultyService {
 
     private void validateFaculty(Faculty faculty) {
         if (faculty.getName() == null) {
-            throw new IllegalFacultyFieldsException("Faculty name cannot be null", "name", faculty.getName());
+            throw new IllegalFacultyFieldsException(
+                    "Faculty name cannot be null", "name", faculty.getName());
         } else if (faculty.getColor() == null) {
             throw new IllegalFacultyFieldsException(
                     "Faculty color cannot be null", "color", String.valueOf(faculty.getColor()));
-        }
-    }
-
-    private void findAlreadyBeingFacultiesWithThisName(String name) {
-        if (facultyRepository.existsByName(name)) {
-            throw new FacultyAlreadyExistsException("Such a faculty already exists");
         }
     }
 }
