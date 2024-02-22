@@ -1,15 +1,13 @@
 package com.evgeniyfedorchenko.hogwarts.exceptions;
 
-public class FacultyNotFoundException extends RuntimeException {
+public class FacultyNotFoundException extends ParentProjectException {
 
-    private final Long id;
-
-    public FacultyNotFoundException(Long id) {
-        this.id = id;
+    public FacultyNotFoundException(String message, String invalidObjectName, String invalidValue) {
+        super(message, invalidObjectName, invalidValue);
     }
 
     @Override
     public String getMessage() {
-        return "Cannot get such a student because the faculty with id %d does not exist".formatted(id);
+        return "Faculty with %s = %s isn't found".formatted(getInvalidObjectName(), getInvalidValue());
     }
 }

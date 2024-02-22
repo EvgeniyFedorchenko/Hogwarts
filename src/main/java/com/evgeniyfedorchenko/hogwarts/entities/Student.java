@@ -71,6 +71,6 @@ public class Student {
 
     @Override
     public String toString() {
-        return "ID-%d: %s, %dy.o. (%s)".formatted(id, name, age, faculty.getName());
+        return "Student %d: %s, %dy.o. (%s)".formatted(id, name, age, faculty.getName());
     }
 }

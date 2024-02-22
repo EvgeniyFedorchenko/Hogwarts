@@ -1,6 +1,6 @@
 package com.evgeniyfedorchenko.hogwarts.exceptions;
 
-public class IllegalStudentFieldsException extends IllegalFieldsException {
+public class IllegalStudentFieldsException extends ParentProjectException {
 
     public IllegalStudentFieldsException(String message, String paramName, String invalidValue) {
         super(message, paramName, invalidValue);
@@ -8,6 +8,6 @@ public class IllegalStudentFieldsException extends IllegalFieldsException {
 
     @Override
     public String getMessage() {
-        return "Value %s of parameter %s of student is invalid".formatted(getInvalidValue(), getParamName());
+        return "Value %s of parameter %s of student is invalid".formatted(getInvalidValue(), getInvalidObjectName());
     }
 }

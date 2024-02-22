@@ -36,8 +36,12 @@ public class AvatarServiceImpl implements AvatarService {
 
     @Override
     public void downloadAvatar(Long studentId, MultipartFile avatarFile) throws IOException {
-        Student student = studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
-        Path filePath = Path.of(avatarsDir, studentId + "-" + student.getName() + getExtension(avatarFile.getOriginalFilename()));
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() ->
+                        new StudentNotFoundException("Student with ID " + studentId + "not found",
+                                "id", String.valueOf(studentId)));
+        Path filePath = Path.of(avatarsDir,
+                studentId + "-" + student.getName() + getExtension(avatarFile.getOriginalFilename()));
 
         downloadToLocal(avatarFile, filePath);
         downloadToDb(avatarFile, filePath, student);
@@ -46,7 +50,8 @@ public class AvatarServiceImpl implements AvatarService {
     @Override
     @Transactional
     public Avatar findAvatar(Long id) {
-        return avatarRepository.findById(id).orElseThrow(AvatarNotFoundException::new);
+        return avatarRepository.findById(id).orElseThrow(() ->
+                new AvatarNotFoundException("Avatar with ID " + id + "not found", "Avatar", String.valueOf(id)));
     }
 
     private void downloadToLocal(MultipartFile avatarFile, Path filePath) throws IOException {

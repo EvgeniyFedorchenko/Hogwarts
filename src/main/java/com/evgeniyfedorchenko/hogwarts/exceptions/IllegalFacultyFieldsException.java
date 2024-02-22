@@ -1,6 +1,6 @@
 package com.evgeniyfedorchenko.hogwarts.exceptions;
 
-public class IllegalFacultyFieldsException extends IllegalFieldsException {
+public class IllegalFacultyFieldsException extends ParentProjectException {
 
     public IllegalFacultyFieldsException(String message, String paramName, String invalidValue) {
         super(message, paramName, invalidValue);
@@ -8,6 +8,6 @@ public class IllegalFacultyFieldsException extends IllegalFieldsException {
 
     @Override
     public String getMessage() {
-        return "Value %s of parameter %s of faculty is invalid".formatted(getInvalidValue(), getParamName());
+        return "Value %s of parameter %s of faculty is invalid".formatted(getInvalidValue(), getInvalidObjectName());
     }
 }

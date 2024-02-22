@@ -54,7 +54,9 @@ public class StudentServiceImpl implements StudentService {
             oldStudent.setName(student.getName());
             oldStudent.setAge(student.getAge());
             oldStudent.setFaculty(facultyRepository.findById(student.getFaculty().getId())
-                    .orElseThrow(() -> new FacultyNotFoundException(student.getFaculty().getId())));
+                    .orElseThrow(() ->
+                            new FacultyNotFoundException("Faculty with ID " + student.getFaculty().getId() + "not found",
+                                    "id", String.valueOf(student.getFaculty().getId()))));
 
             return Optional.of(studentRepository.save(oldStudent));
         } else {
