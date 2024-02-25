@@ -64,7 +64,6 @@ public class AvatarServiceImpl implements AvatarService {
         }
     }
 
-    @Transactional
     private void downloadToDb(MultipartFile avatarFile, Path filePath, Student student) throws IOException {
 
         Avatar avatar = avatarRepository.findByStudent_Id(student.getId()).orElseGet(Avatar::new);
