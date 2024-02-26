@@ -1,12 +1,15 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
+import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.FacultyNotFoundException;
 import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalStudentFieldsException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.StudentNotFoundException;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,11 +19,14 @@ public class StudentServiceImpl implements StudentService {
 
     private final StudentRepository studentRepository;
     private final FacultyRepository facultyRepository;
+    private final AvatarService avatarService;
 
     public StudentServiceImpl(StudentRepository studentRepository,
-                              FacultyRepository facultyRepository) {
+                              FacultyRepository facultyRepository,
+                              AvatarService avatarService) {
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
+        this.avatarService = avatarService;
     }
 
     @Override
@@ -91,6 +97,31 @@ public class StudentServiceImpl implements StudentService {
         Optional<Student> studentOpt = studentRepository.findById(id);
         return studentOpt.map(Student::getFaculty);
     }
+
+    @Override
+    public boolean setAvatar(Long id, MultipartFile avatarFile) {
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() ->
+                        new StudentNotFoundException("Student with ID " + id + "not found", "id", String.valueOf(id)));
+
+        return avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
+        /*if (avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile)) {
+            return Optional.of(student);
+        } else {
+            return Optional.empty();
+        }*/
+    }
+
+    @Override
+    public Avatar getAvatar(Long studentId, boolean large) {
+        Long avatarId = studentRepository.findById(studentId).orElseThrow(() ->
+                        new StudentNotFoundException("Student with ID " + studentId + "not found", "id", String.valueOf(studentId)))
+                .getAvatar()
+                .getId();
+
+        return large ? avatarService.getFromLocal(avatarId) : avatarService.findAvatar(avatarId);
+    }
+
 
     private void validateStudent(Student student) {
         if (student.getName() == null) {

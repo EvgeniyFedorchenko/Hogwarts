@@ -12,13 +12,14 @@ public class Avatar {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String filePath;
-    private long fileSize;
     private String mediaType;
 
+    @Lob
     @Column(columnDefinition = "oid")
     private byte[] data;
 
-    @OneToOne
+//    @JsonIgnore
+    @OneToOne(mappedBy = "avatar")
     private Student student;
 
     public Long getId() {
@@ -35,14 +36,6 @@ public class Avatar {
 
     public void setFilePath(String filePath) {
         this.filePath = filePath;
-    }
-
-    public long getFileSize() {
-        return fileSize;
-    }
-
-    public void setFileSize(long fileSize) {
-        this.fileSize = fileSize;
     }
 
     public String getMediaType() {

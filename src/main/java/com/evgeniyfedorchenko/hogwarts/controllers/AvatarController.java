@@ -1,3 +1,10 @@
+/*
+*
+* 26.02.2024: Класс более не используется.
+*             Эндпоинты для работы с аватарками перенесены в класс StudentController
+*
+*/
+
 package com.evgeniyfedorchenko.hogwarts.controllers;
 
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
@@ -18,6 +25,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+@Deprecated
 @Tag(name = "Avatars")
 @RestController
 @RequestMapping(path = "/avatars")
@@ -31,8 +39,8 @@ public class AvatarController {
 
     @PostMapping(path = "/{studentId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload avatar")
-    public ResponseEntity<String> downloadAvatar(@PathVariable Long studentId, @RequestParam MultipartFile avatar) throws IOException {
-        avatarService.downloadAvatar(studentId, avatar);
+    public ResponseEntity<String> downloadAvatar(@PathVariable Long studentId, @RequestPart MultipartFile avatar) {
+//        avatarService.downloadAvatar(studentId, avatar);
         return ResponseEntity.ok().build();
     }
 
@@ -43,7 +51,7 @@ public class AvatarController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(avatar.getMediaType()));
-        headers.setContentLength(avatar.getFileSize());
+        headers.setContentLength(avatar.getData().length);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .headers(headers)

@@ -20,6 +20,10 @@ public class Student {
     @JoinColumn(name = "faculty_id")
     private Faculty faculty;
 
+    @OneToOne
+    @JoinColumn(name = "avatar_id")
+    private Avatar avatar;
+
     public Long getId() {
         return id;
     }
@@ -51,6 +55,15 @@ public class Student {
     public void setFaculty(Faculty facultyId) {
         this.faculty = facultyId;
     }
+
+    public Avatar getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(Avatar avatar) {
+        this.avatar = avatar;
+    }
+
 
     @Override
     public boolean equals(Object otherStudent) {     /* Каждый студент имеет свой УНИКАЛЬНЫЙ id */
