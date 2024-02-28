@@ -42,9 +42,9 @@ public class StudentController {
 
     @GetMapping(params = {"age", "upTo"})
     @Operation(summary = "Enter one value for an exact-match search and two values for a range search")
-    public List<Student> getStudentByAgeBetween(@RequestParam int age,
+    public List<Student> getStudentByAge(@RequestParam int age,
                                                 @RequestParam(required = false, defaultValue = "-1") int upTo) {
-        return studentService.findStudentsByAgeBetween(age, upTo);
+        return studentService.findStudentsByAge(age, upTo);
     }
 
 
@@ -86,6 +86,7 @@ public class StudentController {
     public ResponseEntity<Student> deleteStudent(@PathVariable Long id) {
         return ResponseEntity.of(studentService.deleteStudent(id));
     }
+
 
     private ResponseEntity<byte[]> transform(Avatar avatar) {
         return ResponseEntity.status(HttpStatus.OK)

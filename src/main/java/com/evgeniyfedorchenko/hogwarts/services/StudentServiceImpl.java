@@ -3,9 +3,10 @@ package com.evgeniyfedorchenko.hogwarts.services;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
-import com.evgeniyfedorchenko.hogwarts.exceptions.FacultyNotFoundException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalStudentFieldsException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.StudentNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarProcessingException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.FacultyNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.IllegalStudentFieldsException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.StudentNotFoundException;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.stereotype.Service;
@@ -88,7 +89,7 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public List<Student> findStudentsByAgeBetween(int min, int max) {
+    public List<Student> findStudentsByAge(int min, int max) {
         return max == -1L ? findStudentsByExactAge(min) : studentRepository.findByAgeBetween(min, max);
     }
 
@@ -105,11 +106,6 @@ public class StudentServiceImpl implements StudentService {
                         new StudentNotFoundException("Student with ID " + id + "not found", "id", String.valueOf(id)));
 
         return avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
-        /*if (avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile)) {
-            return Optional.of(student);
-        } else {
-            return Optional.empty();
-        }*/
     }
 
     @Override
@@ -119,7 +115,11 @@ public class StudentServiceImpl implements StudentService {
                 .getAvatar()
                 .getId();
 
-        return large ? avatarService.getFromLocal(avatarId) : avatarService.findAvatar(avatarId);
+        try {
+            return large ? avatarService.getFromLocal(avatarId) : avatarService.findAvatar(avatarId);
+        } catch (Exception e) {
+            throw new AvatarProcessingException("Unable to read avatar-data of student with id = " + studentId, e);
+        }
     }
 
 

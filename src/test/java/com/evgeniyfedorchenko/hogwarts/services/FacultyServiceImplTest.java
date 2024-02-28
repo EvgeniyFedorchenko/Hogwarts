@@ -4,7 +4,7 @@ import com.evgeniyfedorchenko.hogwarts.entities.Color;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.FacultyAlreadyExistsException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalFacultyFieldsException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.IllegalFacultyFieldsException;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;

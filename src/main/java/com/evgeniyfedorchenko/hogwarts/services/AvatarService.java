@@ -4,6 +4,8 @@ import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+
 public interface AvatarService {
 
     Avatar findAvatar(Long id);
@@ -12,5 +14,5 @@ public interface AvatarService {
 
     boolean downloadToLocal(Student student, MultipartFile avatarFile);
 
-    Avatar getFromLocal(Long avatarId);
+    Avatar getFromLocal(Long avatarId) throws IOException;
 }

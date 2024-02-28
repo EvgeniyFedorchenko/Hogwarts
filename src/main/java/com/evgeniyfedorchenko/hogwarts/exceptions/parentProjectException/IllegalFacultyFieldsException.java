@@ -1,4 +1,4 @@
-package com.evgeniyfedorchenko.hogwarts.exceptions;
+package com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException;
 
 public class IllegalFacultyFieldsException extends ParentProjectException {
 

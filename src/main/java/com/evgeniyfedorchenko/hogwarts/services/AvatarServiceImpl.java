@@ -2,8 +2,8 @@ package com.evgeniyfedorchenko.hogwarts.services;
 
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
-import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarNotFoundException;
 import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarProcessingException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.AvatarNotFoundException;
 import com.evgeniyfedorchenko.hogwarts.repositories.AvatarRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -44,7 +44,7 @@ public class AvatarServiceImpl implements AvatarService {
         try {
             data = avatarFile.getBytes();
         } catch (IOException e) {
-            throw new AvatarProcessingException(e);   // Если проблемы с изображением
+            throw new AvatarProcessingException("Unable to read avatar-data of student with id = " + student.getId(), e);   // Если проблемы с изображением
         }
 //        String fileName = avatarsDir + student.toString() + "." + getFilenameExtension(avatarFile.getOriginalFilename());
 
@@ -80,16 +80,13 @@ public class AvatarServiceImpl implements AvatarService {
     }
 
     @Override
-    public Avatar getFromLocal(Long id) {
+    public Avatar getFromLocal(Long id) throws IOException {
         Avatar avatar = findAvatar(id);
         Avatar afr = new Avatar();
         byte[] data;
 
-        try {
-            data = Files.readAllBytes(Path.of(avatar.getFilePath()));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        data = Files.readAllBytes(Path.of(avatar.getFilePath()));
+
         afr.setData(data);
         afr.setMediaType(avatar.getMediaType());
         return afr;
