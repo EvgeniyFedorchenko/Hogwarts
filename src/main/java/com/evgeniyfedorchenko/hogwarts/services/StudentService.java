@@ -1,7 +1,9 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
+import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,7 +20,11 @@ public interface StudentService {
 
     List<Student> findStudentsByExactAge(int age);
 
-    List<Student> findStudentsByAgeBetween(int min, int max);
+    List<Student> findStudentsByAge(int min, int max);
 
     Optional<Faculty> findFaculty(Long id);
+
+    boolean setAvatar(Long id, MultipartFile avatarFile);
+
+    Avatar getAvatar(Long id, boolean large);
 }

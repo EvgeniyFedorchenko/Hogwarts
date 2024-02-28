@@ -3,8 +3,8 @@ package com.evgeniyfedorchenko.hogwarts.services;
 import com.evgeniyfedorchenko.hogwarts.entities.Color;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
-import com.evgeniyfedorchenko.hogwarts.exceptions.FacultyNotFoundException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalStudentFieldsException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.FacultyNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.IllegalStudentFieldsException;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -170,7 +170,7 @@ class StudentServiceImplTest {
     @Test
     void findStudentsByExactAgeTest() {
         when(studentRepositoryMock.findByAge(STUDENT_1.getAge())).thenReturn(List.of(STUDENT_1));
-        List<Student> actual = out.findStudentsByAgeBetween(STUDENT_1.getAge(), -1);
+        List<Student> actual = out.findStudentsByAge(STUDENT_1.getAge(), -1);
         assertThat(actual).doesNotContainNull()
                 .containsOnly(STUDENT_1);
     }
@@ -179,7 +179,7 @@ class StudentServiceImplTest {
     void findStudentsByAgeBetweenTest() {
         when(studentRepositoryMock.findByAgeBetween(STUDENT_1.getAge(), STUDENT_3.getAge()))
                 .thenReturn(List.of(STUDENT_1, STUDENT_2, STUDENT_3));
-        List<Student> actual = out.findStudentsByAgeBetween(STUDENT_1.getAge(), STUDENT_3.getAge());
+        List<Student> actual = out.findStudentsByAge(STUDENT_1.getAge(), STUDENT_3.getAge());
         assertThat(actual).doesNotContainNull()
                 .containsOnly(STUDENT_1, STUDENT_2, STUDENT_3)
                 .doesNotContain(STUDENT_4);

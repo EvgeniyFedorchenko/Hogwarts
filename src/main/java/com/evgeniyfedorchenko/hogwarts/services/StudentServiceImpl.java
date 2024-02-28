@@ -1,12 +1,16 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
+import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
-import com.evgeniyfedorchenko.hogwarts.exceptions.FacultyNotFoundException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.IllegalStudentFieldsException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarProcessingException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.FacultyNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.IllegalStudentFieldsException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.StudentNotFoundException;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,11 +20,14 @@ public class StudentServiceImpl implements StudentService {
 
     private final StudentRepository studentRepository;
     private final FacultyRepository facultyRepository;
+    private final AvatarService avatarService;
 
     public StudentServiceImpl(StudentRepository studentRepository,
-                              FacultyRepository facultyRepository) {
+                              FacultyRepository facultyRepository,
+                              AvatarService avatarService) {
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
+        this.avatarService = avatarService;
     }
 
     @Override
@@ -54,7 +61,9 @@ public class StudentServiceImpl implements StudentService {
             oldStudent.setName(student.getName());
             oldStudent.setAge(student.getAge());
             oldStudent.setFaculty(facultyRepository.findById(student.getFaculty().getId())
-                    .orElseThrow(() -> new FacultyNotFoundException(student.getFaculty().getId())));
+                    .orElseThrow(() ->
+                            new FacultyNotFoundException("Faculty with ID " + student.getFaculty().getId() + "not found",
+                                    "id", String.valueOf(student.getFaculty().getId()))));
 
             return Optional.of(studentRepository.save(oldStudent));
         } else {
@@ -80,7 +89,7 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public List<Student> findStudentsByAgeBetween(int min, int max) {
+    public List<Student> findStudentsByAge(int min, int max) {
         return max == -1L ? findStudentsByExactAge(min) : studentRepository.findByAgeBetween(min, max);
     }
 
@@ -89,6 +98,30 @@ public class StudentServiceImpl implements StudentService {
         Optional<Student> studentOpt = studentRepository.findById(id);
         return studentOpt.map(Student::getFaculty);
     }
+
+    @Override
+    public boolean setAvatar(Long id, MultipartFile avatarFile) {
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() ->
+                        new StudentNotFoundException("Student with ID " + id + "not found", "id", String.valueOf(id)));
+
+        return avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
+    }
+
+    @Override
+    public Avatar getAvatar(Long studentId, boolean large) {
+        Long avatarId = studentRepository.findById(studentId).orElseThrow(() ->
+                        new StudentNotFoundException("Student with ID " + studentId + "not found", "id", String.valueOf(studentId)))
+                .getAvatar()
+                .getId();
+
+        try {
+            return large ? avatarService.getFromLocal(avatarId) : avatarService.findAvatar(avatarId);
+        } catch (Exception e) {
+            throw new AvatarProcessingException("Unable to read avatar-data of student with id = " + studentId, e);
+        }
+    }
+
 
     private void validateStudent(Student student) {
         if (student.getName() == null) {
