@@ -1,5 +1,6 @@
 package com.evgeniyfedorchenko.hogwarts.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.util.Objects;
@@ -18,7 +19,7 @@ public class Avatar {
     @Column(columnDefinition = "oid")
     private byte[] data;
 
-//    @JsonIgnore
+    @JsonIgnore
     @OneToOne(mappedBy = "avatar")
     private Student student;
 
