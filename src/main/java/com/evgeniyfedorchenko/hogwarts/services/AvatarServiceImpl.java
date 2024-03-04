@@ -23,7 +23,6 @@ public class AvatarServiceImpl implements AvatarService {
 
     @Value("${path.to.avatars.folder}")
     private Path avatarsDir;
-    private final String fileName = avatarsDir + "%s.%s";
 
     public AvatarServiceImpl(AvatarRepository avatarRepository) {
         this.avatarRepository = avatarRepository;
@@ -31,9 +30,9 @@ public class AvatarServiceImpl implements AvatarService {
 
     @Override
     @Transactional
-    public Avatar findAvatar(Long id) {
-        return avatarRepository.findById(id).orElseThrow(() ->
-                new AvatarNotFoundException("Avatar with ID " + id + "not found", "Avatar", String.valueOf(id)));
+    public Avatar findAvatar(Long avatarId) {
+        return avatarRepository.findById(avatarId).orElseThrow(() ->
+                new AvatarNotFoundException("Avatar with ID " + avatarId + "not found", "Avatar", String.valueOf(avatarId)));
     }
 
     @Override
@@ -46,12 +45,10 @@ public class AvatarServiceImpl implements AvatarService {
         } catch (IOException e) {
             throw new AvatarProcessingException("Unable to read avatar-data of student with id = " + student.getId(), e);   // Если проблемы с изображением
         }
-//        String fileName = avatarsDir + student.toString() + "." + getFilenameExtension(avatarFile.getOriginalFilename());
 
         Avatar avatar = avatarRepository.findByStudent_Id(student.getId()).orElseGet(Avatar::new);
         avatar.setStudent(student);
-        avatar.setFilePath(fileName
-                .formatted(student.toString(), getFilenameExtension(avatarFile.getOriginalFilename())));
+        avatar.setFilePath(avatarsDir + "/" + student + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
         avatar.setMediaType(avatarFile.getContentType());
         avatar.setData(data);
 
@@ -66,11 +63,9 @@ public class AvatarServiceImpl implements AvatarService {
             if (!Files.exists(avatarsDir) || !Files.isDirectory(avatarsDir)) {
                 Files.createDirectories(avatarsDir);
             }
-            Path path = Path.of(fileName
-                    .formatted(student.toString(), getFilenameExtension(avatarFile.getOriginalFilename())));
+            Path path = Path.of(avatarsDir + "/" + student.toString() + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
 
 //            Здесь будет сжатие изображения
-//            Path path = Path.of(avatarsDir + student.toString() + "." + getFilenameExtension(avatarFile.getOriginalFilename());
 
             Files.write(path, avatarFile.getBytes());
             return true;
@@ -80,8 +75,8 @@ public class AvatarServiceImpl implements AvatarService {
     }
 
     @Override
-    public Avatar getFromLocal(Long id) throws IOException {
-        Avatar avatar = findAvatar(id);
+    public Avatar getFromLocal(Long avatarId) throws IOException {
+        Avatar avatar = findAvatar(avatarId);
         Avatar afr = new Avatar();
         byte[] data;
 

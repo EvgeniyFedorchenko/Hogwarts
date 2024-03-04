@@ -3,6 +3,7 @@ package com.evgeniyfedorchenko.hogwarts.entities;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -19,7 +20,7 @@ public class Faculty {
     private Color color;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "faculty")
+    @OneToMany(mappedBy = "faculty", fetch = FetchType.EAGER)
     private List<Student> students;
 
     public Long getId() {
@@ -47,7 +48,8 @@ public class Faculty {
     }
 
     public List<Student> getStudents() {
-        return students;
+        return students == null ? new ArrayList<>() : students;
+
     }
 
     public void setStudents(List<Student> students) {

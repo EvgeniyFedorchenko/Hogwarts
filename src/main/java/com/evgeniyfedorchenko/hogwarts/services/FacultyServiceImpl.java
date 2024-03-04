@@ -9,6 +9,7 @@ import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,7 +35,7 @@ public class FacultyServiceImpl implements FacultyService {
         Faculty newFaculty = new Faculty();
         newFaculty.setName(faculty.getName());
         newFaculty.setColor(faculty.getColor());
-        newFaculty.setStudents(faculty.getStudents());
+        newFaculty.setStudents(new ArrayList<>());
 
         return facultyRepository.save(newFaculty);
     }
@@ -55,9 +56,9 @@ public class FacultyServiceImpl implements FacultyService {
         }
 
         // Если факультет с таким именем уже есть в БД и это другой факультет (у него другой id) - прерываем метод
-        Faculty firstByName = facultyRepository.findFirstByName(faculty.getName());
-        if (firstByName != null && !id.equals(firstByName.getId())) {
-            return Optional.empty();
+        Optional<Faculty> firstByName = facultyRepository.findFirstByName(faculty.getName());
+        if (firstByName.isPresent() && !id.equals(firstByName.get().getId())) {
+            throw new FacultyAlreadyExistsException("This name already exists");
 
             // Иначе - берем факультет и меняем его
         } else {
