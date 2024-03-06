@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-import static com.evgeniyfedorchenko.hogwarts.services.Constants.*;
+import static com.evgeniyfedorchenko.hogwarts.Constants.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,25 +32,34 @@ class StudentServiceImplTest {
     private StudentRepository studentRepositoryMock;
     @Mock
     private FacultyRepository facultyRepositoryMock;
+    @Mock
+    private FacultyService facultyServiceMock;
     @InjectMocks
     private StudentServiceImpl out;
 
     @BeforeEach
     void BeforeEach() {
-        constantsInitialisation();
+        testConstantsInitialisation();
     }
 
     @Test
     void createStudentPositiveTest() {
+        STUDENT_3.setFaculty(FACULTY_1);
+        ;
         Student incompleteStudent = new Student();
         incompleteStudent.setName(STUDENT_3.getName());
         incompleteStudent.setAge(STUDENT_3.getAge());
         incompleteStudent.setFaculty(STUDENT_3.getFaculty());
 
+        when(facultyRepositoryMock.findById(FACULTY_1.getId())).thenReturn(Optional.of(FACULTY_1));
         when(studentRepositoryMock.save(incompleteStudent)).thenReturn(STUDENT_3);
+        when(facultyServiceMock.updateFaculty(FACULTY_3.getId(), FACULTY_3)).thenReturn(Optional.of(FACULTY_3));
 
         Student actual = out.createStudent(STUDENT_3);
-        assertThat(actual).isEqualTo(STUDENT_3);
+        assertThat(actual)
+//                .usingRecursiveComparison()
+//                .ignoringFields("faculty")
+                .isEqualTo(STUDENT_3);
     }
 
     @Test
@@ -88,7 +97,8 @@ class StudentServiceImplTest {
     @Test
     void updateStudentPositiveTest() {
 
-        when(studentRepositoryMock.findById(4L)).thenReturn(Optional.of(STUDENT_4));
+        STUDENT_4_EDITED.setFaculty(FACULTY_1);
+        when(studentRepositoryMock.findById(STUDENT_4.getId())).thenReturn(Optional.of(STUDENT_4));
         when(studentRepositoryMock.save(STUDENT_4_EDITED)).thenReturn(STUDENT_4_EDITED);
         when(facultyRepositoryMock.findById(STUDENT_4_EDITED.getFaculty().getId()))
                 .thenReturn(Optional.of(STUDENT_4_EDITED.getFaculty()));
@@ -138,7 +148,7 @@ class StudentServiceImplTest {
         when(studentRepositoryMock.findById(STUDENT_WITHOUT_FACULTY.getId()))
                 .thenReturn(Optional.of(STUDENT_WITHOUT_FACULTY));
         assertThatThrownBy(() -> out.updateStudent(STUDENT_WITHOUT_FACULTY.getId(), STUDENT_WITHOUT_FACULTY).get())
-                .isInstanceOf(NoSuchElementException.class);
+                .isInstanceOf(IllegalStudentFieldsException.class);
 
     }
 
@@ -179,14 +189,15 @@ class StudentServiceImplTest {
     void findStudentsByAgeBetweenTest() {
         when(studentRepositoryMock.findByAgeBetween(STUDENT_1.getAge(), STUDENT_3.getAge()))
                 .thenReturn(List.of(STUDENT_1, STUDENT_2, STUDENT_3));
+
         List<Student> actual = out.findStudentsByAge(STUDENT_1.getAge(), STUDENT_3.getAge());
         assertThat(actual).doesNotContainNull()
-                .containsOnly(STUDENT_1, STUDENT_2, STUDENT_3)
-                .doesNotContain(STUDENT_4);
+                .containsOnly(STUDENT_1, STUDENT_2, STUDENT_3);
     }
 
     @Test
     void findFacultyPositiveTest() {
+        STUDENT_1.setFaculty(FACULTY_1);
         when(studentRepositoryMock.findById(STUDENT_1.getId())).thenReturn(Optional.of(STUDENT_1));
         Optional<Faculty> actual = out.findFaculty(STUDENT_1.getId());
         assertThat(actual.get()).isEqualTo(STUDENT_1.getFaculty());

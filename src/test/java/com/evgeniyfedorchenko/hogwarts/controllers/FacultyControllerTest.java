@@ -324,7 +324,6 @@ class FacultyControllerTest {
     void updateNonexistentFacultyNegativeTest() {
         Faculty faculty = facultyRepository.save(FACULTY_4);
 
-
         ResponseEntity<String> responseEntity = testRestTemplate.exchange(
                 baseFacultyUrl() + "/{id}",
                 HttpMethod.PUT,
@@ -353,6 +352,5 @@ class FacultyControllerTest {
         assertThat(responseEntity.getBody())
                 .isNotNull()
                 .isEqualTo("This name already exists");
-
     }
 }
