@@ -101,7 +101,6 @@ public class Constants {
                     faculty.setStudents(new ArrayList<>());
                 });
 
-
         FACULTY_4_EDITED.setId(FACULTY_4.getId());
         FACULTY_4_EDITED.setName(FACULTY_4.getName() + "Edited");
         FACULTY_4_EDITED.setColor(FACULTY_4.getColor());
@@ -114,25 +113,9 @@ public class Constants {
             AVATAR_1.setMediaType(String.valueOf(Files.probeContentType(testResoursePath())));
             AVATAR_1.setFilePath(finalSavedResource());
             AVATAR_1.setData(sentResource());
-//        AVATAR_1.setStudent(targetStudent);
-//        targetStudent.setAvatar(AVATAR_1);
-
         } catch (IOException e) {
             throw new AvatarProcessingException("Test-avatar initialising filed", e);
         }
-    }
-
-    private static List<Student> generateNoNameStudents() {
-        return Stream.generate(() -> {
-                    Student student = new Student();
-                    student.setId(faker.random().nextLong(100, 100));
-                    student.setName(faker.letterify("????????"));
-                    student.setAge(faker.random().nextInt(18, 30));
-                    student.setFaculty(TEST_lIST_OF_4_FACULTY.get(faker.random().nextInt(TEST_lIST_OF_4_FACULTY.size())));
-                    return student;
-                })
-                .limit(faker.random().nextInt(5))
-                .toList();
     }
 
 

@@ -159,8 +159,8 @@ public class StudentControllerTest {
     void createStudentWithIllegalFieldsNegativeTest() {
         // Невалидное только имя
         UNSAVED_STUDENT.setName(null);
-
         List<Student> countStudentsBeforeAdding = studentRepository.findAll();
+
         ResponseEntity<String> responseEntity = testRestTemplate.postForEntity(
                 baseStudentUrl(),
                 UNSAVED_STUDENT,
@@ -170,7 +170,6 @@ public class StudentControllerTest {
                 .isNotNull()
                 .matches("Value (.+?) of parameter (.+?) of student is invalid");
         assertThat(countStudentsBeforeAdding).isEqualTo(studentRepository.findAll());
-
         // Невалидный только возраст
         UNSAVED_STUDENT.setName("randomName");
         UNSAVED_STUDENT.setAge(0);
@@ -184,8 +183,6 @@ public class StudentControllerTest {
                 .isNotNull()
                 .matches("Value (.+?) of parameter (.+?) of student is invalid");
         assertThat(countStudentsBeforeAdding).isEqualTo(studentRepository.findAll());
-
-
         // Студент с faculty = null
         ResponseEntity<String> responseEntity2 = testRestTemplate.postForEntity(
                 baseStudentUrl(),
