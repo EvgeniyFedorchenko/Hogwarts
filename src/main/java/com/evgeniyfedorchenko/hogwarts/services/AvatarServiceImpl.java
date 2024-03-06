@@ -56,6 +56,7 @@ public class AvatarServiceImpl implements AvatarService {
 
         Avatar avatar = avatarRepository.findByStudent_Id(student.getId()).orElseGet(Avatar::new);
         avatar.setStudent(student);
+        avatar.setFilePath(avatarsDir + "/" + student + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
 
         avatar.setFilePath(avatarsDir + "\\" + student + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
 
@@ -99,3 +100,4 @@ public class AvatarServiceImpl implements AvatarService {
         return afr;
     }
 }
+

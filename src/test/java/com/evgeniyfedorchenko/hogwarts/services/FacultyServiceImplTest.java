@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.*;
 
 import static com.evgeniyfedorchenko.hogwarts.services.Constants.*;
+import static com.evgeniyfedorchenko.hogwarts.services.Constants.constantsInitialisation;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -94,7 +95,8 @@ class FacultyServiceImplTest {
 
     @Test
     void updateFacultyPositiveTest() {
-        when(facultyRepositoryMock.findById(4L)).thenReturn(Optional.of(FACULTY_4));
+        when(facultyRepositoryMock.findById(FACULTY_4.getId())).thenReturn(Optional.of(FACULTY_4));
+        when(facultyRepositoryMock.findFirstByName(FACULTY_4_EDITED.getName())).thenReturn(Optional.empty());
         when(facultyRepositoryMock.save(FACULTY_4_EDITED)).thenReturn(FACULTY_4_EDITED);
 
         Faculty actual = out.updateFaculty(FACULTY_4.getId(), FACULTY_4_EDITED).get();
@@ -154,10 +156,10 @@ class FacultyServiceImplTest {
 
         when(facultyRepositoryMock.findById(invalidFaculty.getId()))
                 .thenReturn(Optional.of(invalidFaculty));
-        when(facultyRepositoryMock.findFirstByName(invalidFaculty.getName())).thenReturn(FACULTY_2);
+        when(facultyRepositoryMock.findFirstByName(invalidFaculty.getName())).thenReturn(Optional.of(FACULTY_2));
 
         assertThatThrownBy(() -> out.updateFaculty(invalidFaculty.getId(), invalidFaculty).get())
-                .isInstanceOf(NoSuchElementException.class);
+                .isInstanceOf(FacultyAlreadyExistsException.class);
     }
 
     @Test

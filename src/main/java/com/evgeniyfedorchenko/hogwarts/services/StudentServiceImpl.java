@@ -42,7 +42,6 @@ public class StudentServiceImpl implements StudentService {
         newStudent.setName(student.getName());
         newStudent.setAge(student.getAge());
 
-
         Faculty supposedFaculty = student.getFaculty();
         if (facultyRepository.findById(supposedFaculty.getId()).isPresent()) {
             newStudent.setFaculty(supposedFaculty);
@@ -50,7 +49,6 @@ public class StudentServiceImpl implements StudentService {
 
         Student savedStudent = studentRepository.save(newStudent);
         enrollStudentInFaculty(savedStudent);   // Говорим факультету, что у него новый студент
-
         return savedStudent;
     }
 
