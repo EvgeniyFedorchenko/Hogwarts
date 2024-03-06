@@ -42,6 +42,7 @@ public class StudentServiceImpl implements StudentService {
         newStudent.setName(student.getName());
         newStudent.setAge(student.getAge());
 
+
         Faculty supposedFaculty = student.getFaculty();
         if (facultyRepository.findById(supposedFaculty.getId()).isPresent()) {
             newStudent.setFaculty(supposedFaculty);
@@ -61,6 +62,7 @@ public class StudentServiceImpl implements StudentService {
 
         facultyService.updateFaculty(faculty.getId(), faculty);
     }
+
 
     @Override
     public Optional<Student> findStudent(Long id) {
@@ -90,6 +92,7 @@ public class StudentServiceImpl implements StudentService {
         }
         if (student.getAvatar() != null) {
             oldStudent.setAvatar(student.getAvatar());
+
         }
         return Optional.of(studentRepository.save(oldStudent));
 
@@ -138,7 +141,6 @@ public class StudentServiceImpl implements StudentService {
                         new StudentNotFoundException("Student with ID " + studentId + "not found", "id", String.valueOf(studentId)));
 
         return  avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
-
     }
 
     @Override
@@ -168,6 +170,7 @@ public class StudentServiceImpl implements StudentService {
     }
 
     private void checkExistenceFaculty(Student student) {
+
         if (student.getFaculty() == null || student.getFaculty().getId() == null) {
             throw new IllegalStudentFieldsException("Faculty or its ID must not be null", "faculty", "empty");
 
@@ -178,5 +181,4 @@ public class StudentServiceImpl implements StudentService {
                         "id",
                         String.valueOf(facultyId)));
     }
-
 }

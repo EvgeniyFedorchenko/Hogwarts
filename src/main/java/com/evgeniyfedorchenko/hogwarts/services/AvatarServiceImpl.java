@@ -56,7 +56,9 @@ public class AvatarServiceImpl implements AvatarService {
 
         Avatar avatar = avatarRepository.findByStudent_Id(student.getId()).orElseGet(Avatar::new);
         avatar.setStudent(student);
+
         avatar.setFilePath(avatarsDir + "\\" + student + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
+
         avatar.setMediaType(avatarFile.getContentType());
         avatar.setData(data);
 

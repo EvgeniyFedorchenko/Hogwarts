@@ -23,8 +23,8 @@ public class Student {
     @JoinColumn(name = "faculty_id")
     private Faculty faculty;
 
-    @JsonIgnore
     @OneToOne
+    @JsonIgnore
     @JoinColumn(name = "avatar_id")
     private Avatar avatar;
 
