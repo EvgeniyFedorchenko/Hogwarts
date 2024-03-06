@@ -1,7 +1,9 @@
 package com.evgeniyfedorchenko.hogwarts.entities;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.Objects;
 
@@ -16,10 +18,12 @@ public class Student {
     private String name;
     private int age;
 
+    @NotNull
     @ManyToOne
     @JoinColumn(name = "faculty_id")
     private Faculty faculty;
 
+    @JsonIgnore
     @OneToOne
     @JoinColumn(name = "avatar_id")
     private Avatar avatar;
@@ -52,8 +56,8 @@ public class Student {
         return faculty;
     }
 
-    public void setFaculty(Faculty facultyId) {
-        this.faculty = facultyId;
+    public void setFaculty(Faculty faculty) {
+        this.faculty = faculty;
     }
 
     public Avatar getAvatar() {
@@ -84,6 +88,6 @@ public class Student {
 
     @Override
     public String toString() {
-        return "Student %d: %s, %dy.o. (%s)".formatted(id, name, age, faculty.getName());
+        return "Student %d -  %s, %dy.o. (%s)".formatted(id, name, age, faculty.getName());
     }
 }
