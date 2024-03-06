@@ -12,8 +12,8 @@ public class Avatar {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String filePath;
-    private String mediaType;
+    private String filePath;   // TODO: 06.03.2024 Мб сделать поле типа Path ?
+    private String mediaType;   // TODO: 06.03.2024 Мб сделать поле типа MediaType ?
 
     @Lob
     @Column(columnDefinition = "oid")

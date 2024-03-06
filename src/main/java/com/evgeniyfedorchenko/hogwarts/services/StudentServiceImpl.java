@@ -41,11 +41,15 @@ public class StudentServiceImpl implements StudentService {
         Student newStudent = new Student();
         newStudent.setName(student.getName());
         newStudent.setAge(student.getAge());
-        newStudent.setFaculty(student.getFaculty());
 
-        // Говорим факультету, что у него новый студент
+
+        Faculty supposedFaculty = student.getFaculty();
+        if (facultyRepository.findById(supposedFaculty.getId()).isPresent()) {
+            newStudent.setFaculty(supposedFaculty);
+        }
+
         Student savedStudent = studentRepository.save(newStudent);
-        enrollStudentInFaculty(savedStudent);
+        enrollStudentInFaculty(savedStudent);   // Говорим факультету, что у него новый студент
 
         return savedStudent;
     }
@@ -74,31 +78,32 @@ public class StudentServiceImpl implements StudentService {
             return Optional.empty();
         }
 
-        checkExistenceFaculty(student);
+        checkExistenceFaculty(student);   // Валидация факультета
 
-        if (student.getFaculty() != null && student.getFaculty().getId() != null) {
-            Student oldStudent = studentById.get();
-            oldStudent.setName(student.getName());
-            oldStudent.setAge(student.getAge());
-            oldStudent.setFaculty(facultyRepository.findById(student.getFaculty().getId())
-                    .orElseThrow(() ->
-                            new FacultyNotFoundException("Faculty with ID " + student.getFaculty().getId() + "not found",
-                                    "id", String.valueOf(student.getFaculty().getId()))));
+        Student oldStudent = studentById.get();
+        oldStudent.setName(student.getName());
+        oldStudent.setAge(student.getAge());
+        oldStudent.setFaculty(student.getFaculty());
 
-            // TODO: 03.03.2024 рефактор
-            // Если студент захотел поменять факультет, то в новом факультет добавляем его в список студентов, а в старом убираем
-            Faculty oldFaculty = oldStudent.getFaculty();
-            if (!oldFaculty.equals(student.getFaculty())) {
-                 enrollStudentInFaculty(student);
-                 List<Student> s = oldFaculty.getStudents();
-                 s.remove(oldStudent);
-                 facultyService.updateFaculty(oldFaculty.getId(), oldFaculty);
-            }
-
-            return Optional.of(studentRepository.save(oldStudent));
-        } else {
-            return Optional.empty();
+        // Если студент меняет факультет - из старого его выгоняем (просто обновляем старый факультет)
+        if (!oldStudent.getFaculty().equals(student.getFaculty())) {
+            enrollStudentInFaculty(student);
+            expelStudentFromFaculty(oldStudent);
         }
+        if (student.getAvatar() != null) {
+            oldStudent.setAvatar(student.getAvatar());
+
+        }
+        return Optional.of(studentRepository.save(oldStudent));
+
+    }
+
+    private void expelStudentFromFaculty(Student oldStudent) {
+        Faculty oldFaculty = oldStudent.getFaculty();
+        List<Student> students = oldFaculty.getStudents();
+        students.remove(oldStudent);
+
+        facultyService.updateFaculty(oldFaculty.getId(), oldFaculty);
     }
 
     @Override
@@ -135,7 +140,7 @@ public class StudentServiceImpl implements StudentService {
                 .orElseThrow(() ->
                         new StudentNotFoundException("Student with ID " + studentId + "not found", "id", String.valueOf(studentId)));
 
-        return avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
+        return  avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
     }
 
     @Override
@@ -147,7 +152,7 @@ public class StudentServiceImpl implements StudentService {
 
         try {
             return large ? avatarService.getFromLocal(avatarId) : avatarService.findAvatar(avatarId);
-        } catch (Exception e) {
+        } catch (Exception e) {   // Ловим здесь, потому что нам нужен studentId для фидбека исключения
             throw new AvatarProcessingException("Unable to read avatar-data of student with id = " + studentId, e);
         }
     }
@@ -165,15 +170,15 @@ public class StudentServiceImpl implements StudentService {
     }
 
     private void checkExistenceFaculty(Student student) {
-        if (student.getFaculty() != null && student.getFaculty().getId() != null) {
 
-            Long facultyId = student.getFaculty().getId();
-            facultyRepository.findById(facultyId).orElseThrow(() ->
-                    new FacultyNotFoundException("Faculty with ID " + facultyId + "not found",
-                    "id", String.valueOf(facultyId)));
+        if (student.getFaculty() == null || student.getFaculty().getId() == null) {
+            throw new IllegalStudentFieldsException("Faculty or its ID must not be null", "faculty", "empty");
 
-        } else {
-            throw new IllegalStudentFieldsException("Faculty or its ID must not be null", "faculty", null);
         }
+        Long facultyId = student.getFaculty().getId();
+        facultyRepository.findById(facultyId).orElseThrow(() ->
+                new FacultyNotFoundException("Faculty with ID " + facultyId + "not found",
+                        "id",
+                        String.valueOf(facultyId)));
     }
 }

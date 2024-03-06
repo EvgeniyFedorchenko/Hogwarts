@@ -49,7 +49,6 @@ public class Faculty {
 
     public List<Student> getStudents() {
         return students == null ? new ArrayList<>() : students;
-
     }
 
     public void setStudents(List<Student> students) {
@@ -77,6 +76,6 @@ public class Faculty {
 
     @Override
     public String toString() {
-        return "Faculty %d: %s, clr, students: %s".formatted(id, name, students);
+        return "Faculty %d - %s, clr, students: %s".formatted(id, name, students);
     }
 }
