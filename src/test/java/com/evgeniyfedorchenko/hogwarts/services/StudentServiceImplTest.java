@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-import static com.evgeniyfedorchenko.hogwarts.services.Constants.*;
+import static com.evgeniyfedorchenko.hogwarts.Constants.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,7 +39,7 @@ class StudentServiceImplTest {
 
     @BeforeEach
     void BeforeEach() {
-        constantsInitialisation();
+        testConstantsInitialisation();
     }
 
     @Test
@@ -52,7 +52,7 @@ class StudentServiceImplTest {
 
         when(facultyRepositoryMock.findById(FACULTY_1.getId())).thenReturn(Optional.of(FACULTY_1));
         when(studentRepositoryMock.save(incompleteStudent)).thenReturn(STUDENT_3);
-        when(facultyServiceMock.updateFaculty(FACULTY_3.getId(), FACULTY_3)).thenReturn(Optional.of(FACULTY_3));
+        when(facultyServiceMock.updateFaculty(FACULTY_1.getId(), FACULTY_1)).thenReturn(Optional.of(FACULTY_3));
 
         Student actual = out.createStudent(STUDENT_3);
         assertThat(actual)
