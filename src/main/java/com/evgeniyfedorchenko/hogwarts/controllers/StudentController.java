@@ -44,7 +44,7 @@ public class StudentController {
     @Operation(summary = "Enter one value for an exact-match search and two values for a range search")
     public List<Student> getStudentByAge(@RequestParam int age,
                                          @RequestParam(required = false, defaultValue = "-1") int upTo) {
-        return studentService.findStudentsByAge(age, upTo);
+        return studentService.findStudentsByAgeBetween(age, upTo);
     }
 
 
