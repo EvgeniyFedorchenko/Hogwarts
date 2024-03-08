@@ -24,7 +24,7 @@ public class Student {
     private Faculty faculty;
 
     @OneToOne
-    @JsonIgnore
+    @JsonIgnore     // TODO: 08.03.2024 Убрать @JsonIgnore чтоб при getStudent() возвращать и картинку тоже
     @JoinColumn(name = "avatar_id")
     private Avatar avatar;
 
