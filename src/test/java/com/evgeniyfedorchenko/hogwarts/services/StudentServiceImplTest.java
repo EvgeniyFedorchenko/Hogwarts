@@ -106,9 +106,9 @@ class StudentServiceImplTest {
 
     @Test
     void updateStudentWithNegativeIdTest() {
-        when(studentRepositoryMock.findById(-1L)).thenReturn(Optional.empty());
 
         Student invalidStudent = new Student();
+
         invalidStudent.setId(-1L);
         invalidStudent.setName("student");
         invalidStudent.setAge(18);
@@ -136,7 +136,7 @@ class StudentServiceImplTest {
 
     @Test
     void updateStudentWithInvalidParamsTest() {
-        assertThatThrownBy(() -> out.updateStudent(null, new Student()))
+        assertThatThrownBy(() -> out.updateStudent(1L, new Student()))
                 .isInstanceOf(IllegalStudentFieldsException.class);
     }
 
