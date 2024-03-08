@@ -41,11 +41,7 @@ public class StudentServiceImpl implements StudentService {
         Student newStudent = new Student();
         newStudent.setName(student.getName());
         newStudent.setAge(student.getAge());
-
-        Faculty supposedFaculty = student.getFaculty();
-        if (facultyRepository.findById(supposedFaculty.getId()).isPresent()) {
-            newStudent.setFaculty(supposedFaculty);
-        }
+        newStudent.setFaculty(student.getFaculty());
 
         Student savedStudent = studentRepository.save(newStudent);
         enrollStudentInFaculty(savedStudent);   // Говорим факультету, что у него новый студент
@@ -69,10 +65,13 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     public Optional<Student> updateStudent(Long id, Student student) {
-        validateStudentsFields(student);
+        if (id <= 0L) {
+            return Optional.empty();
+        }
 
+        validateStudentsFields(student);
         Optional<Student> studentById = studentRepository.findById(id);
-        if (id <= 0L || studentById.isEmpty()) {
+        if (studentById.isEmpty()) {
             return Optional.empty();
         }
 
@@ -83,10 +82,10 @@ public class StudentServiceImpl implements StudentService {
         oldStudent.setAge(student.getAge());
         oldStudent.setFaculty(student.getFaculty());
 
-        // Если студент меняет факультет - из старого его выгоняем (просто обновляем старый факультет)
+        // Если студент меняет факультет - из старого его выгоняем (просто обновляем старый факультет), а в новый зачисляем
         if (!oldStudent.getFaculty().equals(student.getFaculty())) {
-            enrollStudentInFaculty(student);
-            expelStudentFromFaculty(oldStudent);
+            expelStudentFromFaculty(oldStudent);   // Отчисление из старого факультета
+            enrollStudentInFaculty(student);   // Зачисление в новый факультет
         }
         if (student.getAvatar() != null) {
             oldStudent.setAvatar(student.getAvatar());
@@ -122,7 +121,9 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public List<Student> findStudentsByAge(int min, int max) {
+    public List<Student> findStudentsByAgeBetween(int min, int max) {
+        /* Можно не вызывать тут findStudentsByExactAge(), а обратиться сразу к репозиторию, а из интерфейса
+           вообще удалить этот метод за ненадобностью, но нме кажется лучше его оставить для большей универсальности интерфейса */
         return max == -1L ? findStudentsByExactAge(min) : studentRepository.findByAgeBetween(min, max);
     }
 
