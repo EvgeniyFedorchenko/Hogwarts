@@ -13,24 +13,32 @@ import com.evgeniyfedorchenko.hogwarts.services.FacultyServiceImpl;
 import com.evgeniyfedorchenko.hogwarts.services.StudentServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.evgeniyfedorchenko.hogwarts.Constants.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,12 +70,19 @@ public class StudentControllerWebMvcTest {
     @SpyBean
     private StudentServiceImpl studentServiceImplSpy;
 
-    @InjectMocks
-    private StudentController studentController;
-
     @BeforeEach
     public void beforeEach() {
         testConstantsInitialisation();
+
+    }
+
+    @AfterEach
+    public void afterEach() throws IOException {
+        if (Files.exists(testAvatarsDir)) {
+            File directory = new File(testAvatarsDir.toUri());
+            Arrays.stream(directory.listFiles()).forEach(file -> file.delete());
+        }
+        Files.deleteIfExists(testAvatarsDir);
     }
 
     @Test
@@ -426,10 +441,42 @@ public class StudentControllerWebMvcTest {
                         .matches("Student with (.*?) = (.*?) isn't found"));
     }
 
+    @MethodSource
+    public static Stream<Arguments> provideParamsForGetAvatarPositiveTest() {
+        return Stream.of(
+                Arguments.of("/{id}/avatar?large=true"),   // Проверка метода получения изображения с диска
+                Arguments.of("/{id}/avatar?large=false")   // Проверка метода получения изображения из БД
+        );
+    }
+
     @Test
-    void getAvatarFromDbPositiveTest() {
+    void getAvatarFromLocalPositiveTest() throws Exception {
+        // TODO: 08.03.2024 Посмотреть как реализовано в TestRestTemplate-ветке
+        STUDENT_1.setFaculty(FACULTY_1);
+        AVATAR_1.setId(1L);   // Как будто бы он присвоился в базе
+        AVATAR_1.setStudent(STUDENT_1);
+        AVATAR_1.setFilePath(AVATAR_1.getFilePath().formatted(STUDENT_1));
+        STUDENT_1.setAvatar(AVATAR_1);
+
+        when(studentRepositoryMock.findById(STUDENT_1.getId())).thenReturn(Optional.of(STUDENT_1));
+        when(avatarRepositoryMock.findById(AVATAR_1.getId())).thenReturn(Optional.of(AVATAR_1));
+
+        Files.createDirectories(testAvatarsDir);   // Без проверки Files.exists() тк AfterEach позаботился об удалении директорий/файлов
+        Files.write(Path.of(finalSavedResource().formatted(STUDENT_1)), Files.readAllBytes(testResoursePath()));
+
+        byte[] responseBody = mockMvc.perform(get("/students/{id}/avatar?large=true", STUDENT_1.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(Files.probeContentType(testResoursePath())))
+
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", Files.probeContentType(testResoursePath())))
+                .andExpect(header().longValue("Content-Length", Files.size(testResoursePath())))
+                .andReturn().getResponse().getContentAsByteArray();
+
+        assertThat(responseBody).isEqualTo(sentResource());
 
     }
+
 
     @Test
     void deleteStudentPositiveTest() throws Exception {
