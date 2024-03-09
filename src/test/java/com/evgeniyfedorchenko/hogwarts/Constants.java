@@ -24,30 +24,26 @@ public class Constants {
     public static final Faculty FACULTY_4 = new Faculty();
     public static final Faculty FACULTY_4_EDITED = new Faculty();
 
-
     /**
      * Директория, в которой сохраняется ресурс во время теста.
      * Удаляется после теста через @AfterEach
      */
-//    @Value("${path.to.avatars.folder}")
-//    private static Path dir;
-    public static Path testAvatarsDir;
+    public static Path testResourceDir;
 
-// TODO: 06.03.2024 поправить названия методов и описание
     /**
      * Путь, по которому должна находиться ресурс после окончания теста.
      * Необходимо ".formatted(Student targetStudent)" для получения пути.
      * Директория удаляется после теста через @AfterEach)
      */
-    public static String finalSavedResource() {
-        return testAvatarsDir + "\\%s."+ getFilenameExtension(String.valueOf(testResoursePath()));
+    public static String sentResourcePath() {
+        return testResourceDir + "\\%s." + getFilenameExtension(String.valueOf(testResoursePath()));
     }
 
     /**
-     * Данные изображения, прочитанные из тестовых исходных ресурсов.
+     * Байты изображения, прочитанные из тестовых исходных ресурсов.
      * Предназначены для отправки и последующего тестирования
      */
-    public static byte[] sentResource() {
+    public static byte[] sentResourceBytes() {
         try {
             return Files.readAllBytes(testResoursePath());   // Исходник, который отправляем
         } catch (IOException e) {
@@ -56,13 +52,13 @@ public class Constants {
 
     }
 
-
     /**
-     * Путь к ресурсу, находящемуся в директории тестовых ресурсов
+     * Путь к исходному тестовому ресурсу
      */
     public static Path testResoursePath() {
         return Path.of("src/test/resources/static/image.jpg");
     }
+
 
     public static final Avatar AVATAR_1 = new Avatar();
 
@@ -84,7 +80,7 @@ public class Constants {
 
     public static void testConstantsInitialisation() {
 
-        testAvatarsDir = Path.of("src/test/resources/avatars");
+        testResourceDir = Path.of("src/test/resources/avatars");
         facultiesConstantsInitialize();
         studentsConstantsInitialize();
         avatarConstantsInitialize();
@@ -96,7 +92,7 @@ public class Constants {
         // TODO: 08.03.2024 Перед review вернуть айдишники на 1, 2, 3 и тд
         Stream.of(FACULTY_1, FACULTY_2, FACULTY_3, FACULTY_4)
                 .forEach(faculty -> {
-                    faculty.setId(faker.random().nextLong(100, 100));
+                    faculty.setId(faker.random().nextLong(100, 200));
                     faculty.setName(faker.letterify("????????"));
                     faculty.setColor(Color.values()[faker.random().nextInt(Color.values().length)]);
                     faculty.setStudents(new ArrayList<>());
@@ -111,12 +107,12 @@ public class Constants {
 
     private static void avatarConstantsInitialize() {
         try {
-            AVATAR_1.setId(faker.random().nextLong(100, 100));
+            AVATAR_1.setId(faker.random().nextLong(100, 200));
             AVATAR_1.setStudent(STUDENT_1);
 
-            AVATAR_1.setFilePath(finalSavedResource());
+            AVATAR_1.setFilePath(sentResourcePath());
             AVATAR_1.setMediaType(String.valueOf(Files.probeContentType(testResoursePath())));
-            AVATAR_1.setData(sentResource());
+            AVATAR_1.setData(sentResourceBytes());
         } catch (IOException e) {
             throw new AvatarProcessingException("Test-avatar initialising filed", e);
         }
@@ -128,7 +124,7 @@ public class Constants {
         Stream.of(STUDENT_1, STUDENT_2, STUDENT_3, STUDENT_4, STUDENT_4_EDITED,
                         STUDENT_WITHOUT_FACULTY, UNSAVED_STUDENT)
                 .forEach(student -> {
-                    student.setId(faker.random().nextLong(100, 100));
+                    student.setId(faker.random().nextLong(100, 200));
                     student.setName(faker.letterify("????????"));
                     student.setAge(faker.random().nextInt(18, 30));
                 });

@@ -19,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -59,12 +61,20 @@ public class StudentControllerWebMvcTest {
     @MockBean
     private AvatarRepository avatarRepositoryMock;
 
-    @SpyBean
-    private FacultyServiceImpl facultyServiceImplSpy;
+    @MockBean
+    private FacultyServiceImpl facultyServiceImplMock;
     @SpyBean
     private AvatarServiceImpl avatarServiceImplSpy;
     @SpyBean
     private StudentServiceImpl studentServiceImplSpy;
+
+    @Captor
+    private ArgumentCaptor<Faculty> facultyCaptor;
+    @Captor
+    private ArgumentCaptor<Avatar> avatarCaptor;
+    @Captor
+    private ArgumentCaptor<Student> studentCaptor;
+
 
     @BeforeEach
     public void beforeEach() {
@@ -81,11 +91,13 @@ public class StudentControllerWebMvcTest {
     @AfterEach
     public void afterEach() throws IOException {
         // TODO: 08.03.2024 почему-то не работает
-        if (Files.exists(testAvatarsDir)) {
-            File directory = new File(testAvatarsDir.toUri());
-            Arrays.stream(directory.listFiles()).forEach(File::delete);
+        if (Files.exists(testResourceDir)) {
+            File[] listFiles = new File(testResourceDir.toUri()).listFiles();
+            if (listFiles != null) {
+                Arrays.stream(listFiles).forEach(File::delete);
+            }
         }
-        Files.deleteIfExists(testAvatarsDir);
+        Files.deleteIfExists(testResourceDir);
     }
 
     @Test
@@ -94,7 +106,8 @@ public class StudentControllerWebMvcTest {
 
         when(facultyRepositoryMock.findById(FACULTY_1.getId())).thenReturn(Optional.of(FACULTY_1));
         when(studentRepositoryMock.save(any(Student.class))).thenReturn(STUDENT_1);
-        doReturn(Optional.of(FACULTY_1)).when(facultyServiceImplSpy).updateFaculty(anyLong(), any(Faculty.class));
+        when(facultyServiceImplMock.updateFaculty(anyLong(), any(Faculty.class))).thenReturn(Optional.of(FACULTY_1));
+
         mockMvc.perform(post("/students")
                         .content(objectMapper.writeValueAsString(STUDENT_1))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -103,9 +116,20 @@ public class StudentControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value(targetStudent.getName()))
                 .andExpect(jsonPath("$.age").value(targetStudent.getAge()))
-                .andExpect(jsonPath("$.faculty.id").value(targetStudent.getFaculty().getId()))
                 .andExpect(jsonPath("$.faculty.name").value(targetStudent.getFaculty().getName()))
                 .andExpect(jsonPath("$.faculty.color").value(targetStudent.getFaculty().getColor().toString()));
+
+        verify(studentRepositoryMock).save(studentCaptor.capture());
+        Student captorValue = studentCaptor.getValue();
+
+        assertThat(captorValue)
+                .usingRecursiveComparison()
+                .ignoringFields("id", "avatar", "faculty.students")
+                .isEqualTo(targetStudent);
+
+//        проверка, что факультет нового студента действительно содержит этого студента
+        assertThat(captorValue.getFaculty().getStudents())
+                .contains(captorValue);
 
     }
 
@@ -304,6 +328,16 @@ public class StudentControllerWebMvcTest {
                 .andExpect(jsonPath("$.name").value(destStudent.getName()))
                 .andExpect(jsonPath("$.age").value(destStudent.getAge()))
                 .andExpect(jsonPath("$.faculty").value(destStudent.getFaculty()));
+
+        verify(studentRepositoryMock).save(studentCaptor.capture());
+        Student captorValue = studentCaptor.getValue();
+        assertThat(captorValue)
+                .usingRecursiveComparison()
+                .ignoringFields("id")
+                .isEqualTo(destStudent);
+
+        assertThat(captorValue.getId())
+                .isEqualTo(srcStudent.getId());
     }
 
     @Test
@@ -323,15 +357,16 @@ public class StudentControllerWebMvcTest {
         Student destStudent = STUDENT_4_EDITED;
         destStudent.setFaculty(FACULTY_2);
 
-        when(studentRepositoryMock.findById(destStudent.getId())).thenReturn(Optional.of(srcStudent));
-        when(facultyRepositoryMock.findById(srcStudent.getFaculty().getId())).thenReturn(Optional.of(srcStudent.getFaculty()));
+        when(studentRepositoryMock.findById(srcStudent.getId())).thenReturn(Optional.of(srcStudent));
+        when(facultyRepositoryMock.findById(destStudent.getFaculty().getId())).thenReturn(Optional.of(destStudent.getFaculty()));
         when(studentRepositoryMock.save(any(Student.class))).thenReturn(STUDENT_4_EDITED);
 
         // Зачислили студента во 2ой факультет
         FACULTY_2.setStudents(List.of(STUDENT_2, STUDENT_3, STUDENT_4_EDITED));
-        doReturn(Optional.of(FACULTY_2)).when(facultyServiceImplSpy).updateFaculty(destStudent.getFaculty().getId(), FACULTY_2);
+        when(facultyServiceImplMock.updateFaculty(anyLong(), any(Faculty.class)))
+                .thenReturn(Optional.of(FACULTY_1))
+                .thenReturn(Optional.of(FACULTY_2));
 
-//         Отчисление студента не проверяем, тк эту информацию из ответа не получить. Она просто сохраняется на сервере
 
         mockMvc.perform(put("/students/{id}", srcStudent.getId())
                         .content(objectMapper.writeValueAsString(destStudent))
@@ -339,10 +374,33 @@ public class StudentControllerWebMvcTest {
                         .accept(MediaType.APPLICATION_JSON))
 
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(destStudent.getId()))
                 .andExpect(jsonPath("$.name").value(destStudent.getName()))
                 .andExpect(jsonPath("$.age").value(destStudent.getAge()))
                 .andExpect(jsonPath("$.faculty").value(destStudent.getFaculty()));
+
+        verify(facultyServiceImplMock, times(2)).updateFaculty(anyLong(), facultyCaptor.capture());
+        List<Faculty> capturedFaculties = facultyCaptor.getAllValues();
+        assertThat(capturedFaculties.get(0).getStudents()).doesNotContain(srcStudent);
+        assertThat(capturedFaculties.get(1).getStudents()).contains(destStudent);
+
+         /* В .save() должен прийти студент с новыми полями (но здешний локально его факультет не обновлен, а там он
+            поднимается из БД, и его студенты обновляются), поэтому исключено поле this.faculty.student
+            Остальные поля факультета (в том числе id) говорят о том, что факультет поднялся правильный */
+        verify(studentRepositoryMock).save(studentCaptor.capture());
+        Student captorValue = studentCaptor.getValue();
+        assertThat(captorValue)
+                .usingRecursiveComparison()
+                .ignoringFields("id", "faculty.students")
+                .isEqualTo(destStudent);
+
+//        id остался старый, так что новый студент не создастся, а просто обновится старый
+        assertThat(captorValue.getId())
+                .isEqualTo(srcStudent.getId());
+
+//        Факультет обновленного студента содержит этого студента
+        assertThat(captorValue.getFaculty().getStudents())
+                .contains(destStudent);
+
     }
 
     @Test
@@ -369,12 +427,10 @@ public class StudentControllerWebMvcTest {
 
     @Test
     void updateStudentWithNonexistentFacultyNegativeTest() throws Exception {
-        STUDENT_4_EDITED.setFaculty(FACULTY_1);
 
         when(studentRepositoryMock.findById(STUDENT_4.getId())).thenReturn(Optional.of(STUDENT_4));
-        when(facultyRepositoryMock.findById(anyLong())).thenReturn(Optional.empty());
 
-        mockMvc.perform(put("/students/{id}", STUDENT_4.getId())   // Проверка, если факультета нет в бд
+        mockMvc.perform(put("/students/{id}", STUDENT_4.getId())   // Проверка, если Faculty == null
                         .content(objectMapper.writeValueAsString(STUDENT_4_EDITED))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -382,12 +438,12 @@ public class StudentControllerWebMvcTest {
                 // FacultyNotFoundException
                 .andExpect(status().isBadRequest())
                 .andExpect(result -> assertThat(result.getResolvedException().getMessage())
-                        .matches("Faculty with (.*?) = (.*?) isn't found"));
+                        .matches("Value (.*?) of parameter (.*?) of student is invalid"));
 
+        STUDENT_4_EDITED.setFaculty(FACULTY_1);
+        when(facultyRepositoryMock.findById(anyLong())).thenReturn(Optional.empty());
 
-        STUDENT_4.setFaculty(null);
-
-        mockMvc.perform(put("/students/{id}", STUDENT_4.getId())   // Проверка, если Faculty == null
+        mockMvc.perform(put("/students/{id}", STUDENT_4.getId())   // Проверка, если факультета нет в бд
                         .content(objectMapper.writeValueAsString(STUDENT_4_EDITED))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -395,7 +451,8 @@ public class StudentControllerWebMvcTest {
                 // IllegalStudentFieldsException
                 .andExpect(status().isBadRequest())
                 .andExpect(result -> assertThat(result.getResolvedException().getMessage())
-                        .matches("Value (.*?) of parameter (.*?) of student is invalid"));
+                        .matches("Faculty with (.*?) = (.*?) isn't found"));
+
     }
 
     @Test
@@ -411,7 +468,7 @@ public class StudentControllerWebMvcTest {
                 "avatar",
                 testResoursePath().getFileName().toString(),
                 Files.probeContentType(testResoursePath()),
-                sentResource());
+                sentResourceBytes());
 
         mockMvc.perform(multipart(HttpMethod.PATCH, "/students/{id}/avatar", targetStudent.getId())
                         .file(multipartFile))
@@ -419,10 +476,26 @@ public class StudentControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("true"));
 
-        Path expected = Path.of(finalSavedResource().formatted(targetStudent));
+        Path expected = Path.of(sentResourcePath().formatted(targetStudent));
         assertThat(Files.exists(expected))
                 .isTrue();
-        assertThat(Files.readAllBytes(expected)).isEqualTo(sentResource());
+        assertThat(Files.readAllBytes(expected)).isEqualTo(sentResourceBytes());
+
+        verify(avatarRepositoryMock).save(avatarCaptor.capture());
+        Avatar avatarCaptorValue = avatarCaptor.getValue();
+        assertThat(avatarCaptorValue)
+                .usingRecursiveComparison()
+                .ignoringFields("id")
+                .isEqualTo(AVATAR_1);
+
+        verify(studentRepositoryMock).save(studentCaptor.capture());
+        Student studentCaptorValue = studentCaptor.getValue();
+        assertThat(studentCaptorValue)
+                .usingRecursiveComparison()
+                .ignoringFields("avatar")
+                .isEqualTo(targetStudent);
+        assertThat(studentCaptorValue.getAvatar())
+                .isEqualTo(AVATAR_1);
     }
 
     @Test
@@ -433,7 +506,7 @@ public class StudentControllerWebMvcTest {
                 "avatar",
                 testResoursePath().getFileName().toString(),
                 Files.probeContentType(testResoursePath()),
-                sentResource());
+                sentResourceBytes());
 
         mockMvc.perform(multipart(HttpMethod.PATCH, "/students/{id}/avatar", FACULTY_1.getId())
                         .file(multipartFile))
@@ -457,8 +530,8 @@ public class StudentControllerWebMvcTest {
         when(studentRepositoryMock.findById(STUDENT_1.getId())).thenReturn(Optional.of(STUDENT_1));
         when(avatarRepositoryMock.findById(AVATAR_1.getId())).thenReturn(Optional.of(AVATAR_1));
 
-        Files.createDirectories(testAvatarsDir);   // Без проверки Files.exists() тк AfterEach позаботился об удалении директорий/файлов
-        Files.write(Path.of(finalSavedResource().formatted(STUDENT_1)), Files.readAllBytes(testResoursePath()));
+        Files.createDirectories(testResourceDir);   // Без проверки Files.exists() тк AfterEach позаботился об удалении директорий/файлов
+        Files.write(Path.of(sentResourcePath().formatted(STUDENT_1)), Files.readAllBytes(testResoursePath()));
 
         byte[] responseBody = mockMvc.perform(get("/students/{id}/avatar?large=" + urlParam, STUDENT_1.getId())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -469,7 +542,7 @@ public class StudentControllerWebMvcTest {
                 .andExpect(header().longValue("Content-Length", Files.size(testResoursePath())))
                 .andReturn().getResponse().getContentAsByteArray();
 
-        assertThat(responseBody).isEqualTo(sentResource());
+        assertThat(responseBody).isEqualTo(sentResourceBytes());
     }
 
     @ParameterizedTest
@@ -477,8 +550,8 @@ public class StudentControllerWebMvcTest {
     void getAvatarNegativeTest(String urlParam) throws Exception {
         when(studentRepositoryMock.findById(STUDENT_1.getId())).thenReturn(Optional.empty());
 
-        Files.createDirectories(testAvatarsDir);   // Без проверки Files.exists() тк AfterEach позаботился об удалении директорий/файлов
-        Files.write(Path.of(finalSavedResource().formatted(STUDENT_1)), Files.readAllBytes(testResoursePath()));
+        Files.createDirectories(testResourceDir);   // Без проверки Files.exists() тк AfterEach позаботился об удалении директорий/файлов
+        Files.write(Path.of(sentResourcePath().formatted(STUDENT_1)), Files.readAllBytes(testResoursePath()));
 
         mockMvc.perform(get("/students/{id}/avatar?large=" + urlParam, STUDENT_1.getId())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -505,6 +578,12 @@ public class StudentControllerWebMvcTest {
                 .andExpect(jsonPath("$.name").value(STUDENT_1.getName()))
                 .andExpect(jsonPath("$.age").value(STUDENT_1.getAge()))
                 .andExpect(jsonPath("$.faculty").value(STUDENT_1.getFaculty()));
+
+        verify(studentRepositoryMock).delete(studentCaptor.capture());
+        Student captureValue = studentCaptor.getValue();
+        assertThat(captureValue)
+                .usingRecursiveComparison()
+                .isEqualTo(STUDENT_1);
     }
 
     @Test
