@@ -22,7 +22,7 @@ import static com.evgeniyfedorchenko.hogwarts.Constants.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,7 +52,7 @@ class StudentServiceImplTest {
 
         when(facultyRepositoryMock.findById(FACULTY_1.getId())).thenReturn(Optional.of(FACULTY_1));
         when(studentRepositoryMock.save(incompleteStudent)).thenReturn(STUDENT_3);
-        when(facultyServiceMock.updateFaculty(FACULTY_1.getId(), FACULTY_1)).thenReturn(Optional.of(FACULTY_3));
+        when(facultyServiceMock.updateFaculty(eq(FACULTY_3.getId()), any(Faculty.class))).thenReturn(Optional.of(FACULTY_3));
 
         Student actual = out.createStudent(STUDENT_3);
         assertThat(actual)
@@ -108,7 +108,6 @@ class StudentServiceImplTest {
     void updateStudentWithNegativeIdTest() {
 
         Student invalidStudent = new Student();
-
         invalidStudent.setId(-1L);
         invalidStudent.setName("student");
         invalidStudent.setAge(18);

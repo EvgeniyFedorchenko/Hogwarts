@@ -59,9 +59,7 @@ public class Constants {
         return Path.of("src/test/resources/static/image.jpg");
     }
 
-
     public static final Avatar AVATAR_1 = new Avatar();
-
 
     public static final Student STUDENT_1 = new Student();
     public static final Student STUDENT_2 = new Student();
