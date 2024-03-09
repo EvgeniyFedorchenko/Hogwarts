@@ -52,7 +52,7 @@ class StudentServiceImplTest {
 
         when(facultyRepositoryMock.findById(FACULTY_1.getId())).thenReturn(Optional.of(FACULTY_1));
         when(studentRepositoryMock.save(incompleteStudent)).thenReturn(STUDENT_3);
-        when(facultyServiceMock.updateFaculty(eq(FACULTY_3.getId()), any(Faculty.class))).thenReturn(Optional.of(FACULTY_3));
+        when(facultyServiceMock.updateFaculty(eq(FACULTY_1.getId()), any(Faculty.class))).thenReturn(Optional.of(FACULTY_3));
 
         Student actual = out.createStudent(STUDENT_3);
         assertThat(actual)
@@ -93,14 +93,14 @@ class StudentServiceImplTest {
 
     @Test
     void updateStudentPositiveTest() {
-
+        STUDENT_4.setFaculty(FACULTY_1);
         STUDENT_4_EDITED.setFaculty(FACULTY_1);
         when(studentRepositoryMock.findById(STUDENT_4.getId())).thenReturn(Optional.of(STUDENT_4));
-        when(studentRepositoryMock.save(STUDENT_4_EDITED)).thenReturn(STUDENT_4_EDITED);
+        when(studentRepositoryMock.save(any(Student.class))).thenReturn(STUDENT_4_EDITED);
         when(facultyRepositoryMock.findById(STUDENT_4_EDITED.getFaculty().getId()))
                 .thenReturn(Optional.of(STUDENT_4_EDITED.getFaculty()));
 
-        Student actual = out.updateStudent(STUDENT_4_EDITED.getId(), STUDENT_4_EDITED).get();
+        Student actual = out.updateStudent(STUDENT_4.getId(), STUDENT_4_EDITED).get();
         assertTrue(actual.equals(STUDENT_4_EDITED));
     }
 

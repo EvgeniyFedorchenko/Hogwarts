@@ -104,12 +104,12 @@ public class StudentControllerWebMvcTest {
     void createStudentPositiveTest() throws Exception {
         Student targetStudent = STUDENT_1;
 
-        when(facultyRepositoryMock.findById(FACULTY_1.getId())).thenReturn(Optional.of(FACULTY_1));
+        when(facultyRepositoryMock.findById(targetStudent.getFaculty().getId())).thenReturn(Optional.of(targetStudent.getFaculty()));
         when(studentRepositoryMock.save(any(Student.class))).thenReturn(STUDENT_1);
         when(facultyServiceImplMock.updateFaculty(anyLong(), any(Faculty.class))).thenReturn(Optional.of(FACULTY_1));
 
         mockMvc.perform(post("/students")
-                        .content(objectMapper.writeValueAsString(STUDENT_1))
+                        .content(objectMapper.writeValueAsString(targetStudent))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
 
@@ -130,7 +130,6 @@ public class StudentControllerWebMvcTest {
 //        проверка, что факультет нового студента действительно содержит этого студента
         assertThat(captorValue.getFaculty().getStudents())
                 .contains(captorValue);
-
     }
 
     @Test
@@ -426,11 +425,28 @@ public class StudentControllerWebMvcTest {
     }
 
     @Test
-    void updateStudentWithNonexistentFacultyNegativeTest() throws Exception {
-
+    void updateStudentWithoutFacultyNegativeTest() throws Exception {
+//        Исправлено
         when(studentRepositoryMock.findById(STUDENT_4.getId())).thenReturn(Optional.of(STUDENT_4));
 
-        mockMvc.perform(put("/students/{id}", STUDENT_4.getId())   // Проверка, если Faculty == null
+        mockMvc.perform(put("/students/{id}", STUDENT_4.getId())
+                        .content(objectMapper.writeValueAsString(STUDENT_WITHOUT_FACULTY))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+
+                // IllegalStudentFieldsException
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertThat(result.getResolvedException().getMessage())
+                        .matches("Value (.*?) of parameter (.*?) of student is invalid"));
+    }
+
+    @Test
+    void updateStudentWithUnknownFacultyNegativeTest() throws Exception {
+        STUDENT_4_EDITED.setFaculty(STUDENT_4.getFaculty());
+        when(studentRepositoryMock.findById(STUDENT_4.getId())).thenReturn(Optional.of(STUDENT_4));
+        when(facultyRepositoryMock.findById(STUDENT_4_EDITED.getFaculty().getId())).thenReturn(Optional.empty());
+
+        mockMvc.perform(put("/students/{id}", STUDENT_4.getId())
                         .content(objectMapper.writeValueAsString(STUDENT_4_EDITED))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -438,21 +454,7 @@ public class StudentControllerWebMvcTest {
                 // FacultyNotFoundException
                 .andExpect(status().isBadRequest())
                 .andExpect(result -> assertThat(result.getResolvedException().getMessage())
-                        .matches("Value (.*?) of parameter (.*?) of student is invalid"));
-
-        STUDENT_4_EDITED.setFaculty(FACULTY_1);
-        when(facultyRepositoryMock.findById(anyLong())).thenReturn(Optional.empty());
-
-        mockMvc.perform(put("/students/{id}", STUDENT_4.getId())   // Проверка, если факультета нет в бд
-                        .content(objectMapper.writeValueAsString(STUDENT_4_EDITED))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-
-                // IllegalStudentFieldsException
-                .andExpect(status().isBadRequest())
-                .andExpect(result -> assertThat(result.getResolvedException().getMessage())
                         .matches("Faculty with (.*?) = (.*?) isn't found"));
-
     }
 
     @Test

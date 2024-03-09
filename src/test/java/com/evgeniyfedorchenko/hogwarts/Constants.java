@@ -80,14 +80,11 @@ public class Constants {
 
         testResourceDir = Path.of("src/test/resources/avatars");
         facultiesConstantsInitialize();
-        studentsConstantsInitialize();
         avatarConstantsInitialize();
-
-
+        studentsConstantsInitialize();
     }
 
     private static void facultiesConstantsInitialize() {
-        // TODO: 08.03.2024 Перед review вернуть айдишники на 1, 2, 3 и тд
         Stream.of(FACULTY_1, FACULTY_2, FACULTY_3, FACULTY_4)
                 .forEach(faculty -> {
                     faculty.setId(faker.random().nextLong(100, 200));
