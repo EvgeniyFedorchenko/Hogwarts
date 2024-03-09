@@ -83,15 +83,16 @@ public class StudentServiceImpl implements StudentService {
         // Если студент меняет факультет - из старого его выгоняем (просто обновляем старый факультет), а в новый зачисляем
         if (!oldStudent.getFaculty().equals(student.getFaculty())) {
             expelStudentFromFaculty(oldStudent);   // Отчисление из старого факультета
-            enrollStudentInFaculty(student);   // Зачисление в новый факультет
+            oldStudent.setFaculty(findedFaculty);
+            enrollStudentInFaculty(oldStudent);   // Зачисление в новый факультет
+        } else {
+            oldStudent.setFaculty(student.getFaculty());
         }
-        oldStudent.setFaculty(findedFaculty);
 
         if (student.getAvatar() != null) {
             oldStudent.setAvatar(student.getAvatar());
         }
         return Optional.of(studentRepository.save(oldStudent));
-
     }
 
     private void expelStudentFromFaculty(Student oldStudent) {

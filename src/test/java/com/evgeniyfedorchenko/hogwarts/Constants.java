@@ -123,7 +123,7 @@ public class Constants {
                     student.setName(faker.letterify("????????"));
                     student.setAge(faker.random().nextInt(18, 30));
                 });
-        STUDENT_1.setAvatar(AVATAR_1);
+//        STUDENT_1.setAvatar(AVATAR_1);
 
         STUDENT_4_EDITED.setName(STUDENT_4.getName() + "Edited");
         STUDENT_4_EDITED.setFaculty(STUDENT_4.getFaculty());
