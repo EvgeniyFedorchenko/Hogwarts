@@ -29,25 +29,24 @@ public class Constants {
      * Директория, в которой сохраняется ресурс во время теста.
      * Удаляется после теста через @AfterEach
      */
-//    @Value("${path.to.avatars.folder}")
-//    private static Path dir;
-    public static Path testAvatarsDir;
+    public static Path testResourceDir;
 
-// TODO: 06.03.2024 поправить названия методов и описание
+
     /**
      * Путь, по которому должна находиться ресурс после окончания теста.
      * Необходимо ".formatted(Student targetStudent)" для получения пути.
      * Директория удаляется после теста через @AfterEach)
      */
-    public static String finalSavedResource() {
-        return testAvatarsDir + "\\%s."+ getFilenameExtension(String.valueOf(testResoursePath()));
+    public static String sentResourcePath() {
+        return testResourceDir + "\\%s." + getFilenameExtension(String.valueOf(testResoursePath()));
     }
 
+
     /**
-     * Данные изображения, прочитанные из тестовых исходных ресурсов.
+     * Байты изображения, прочитанные из тестовых исходных ресурсов.
      * Предназначены для отправки и последующего тестирования
      */
-    public static byte[] sentResource() {
+    public static byte[] sentResourceBytes() {
         try {
             return Files.readAllBytes(testResoursePath());   // Исходник, который отправляем
         } catch (IOException e) {
@@ -58,7 +57,7 @@ public class Constants {
 
 
     /**
-     * Путь к ресурсу, находящемуся в директории тестовых ресурсов
+     * Путь к исходному тестовому ресурсу
      */
     public static Path testResoursePath() {
         return Path.of("src/test/resources/static/image.jpg");
@@ -84,7 +83,7 @@ public class Constants {
 
     public static void testConstantsInitialisation() {
 
-        testAvatarsDir = Path.of("src/test/resources/avatars");
+        testResourceDir = Path.of("src/test/resources/avatars");
         facultiesConstantsInitialize();
         avatarConstantsInitialize();
         studentsConstantsInitialize();
@@ -111,8 +110,8 @@ public class Constants {
     private static void avatarConstantsInitialize() {
         try {
             AVATAR_1.setMediaType(String.valueOf(Files.probeContentType(testResoursePath())));
-            AVATAR_1.setFilePath(finalSavedResource());
-            AVATAR_1.setData(sentResource());
+            AVATAR_1.setFilePath(sentResourcePath());
+            AVATAR_1.setData(sentResourceBytes());
         } catch (IOException e) {
             throw new AvatarProcessingException("Test-avatar initialising filed", e);
         }

@@ -69,6 +69,7 @@ public class StudentControllerTest {
     private AvatarRepository avatarRepository;
     @Autowired
     private StudentRepository studentRepository;
+
     private List<Faculty> savedFaculties;
     private List<Student> savedStudents;
 
@@ -91,8 +92,8 @@ public class StudentControllerTest {
                 })
                 .toList());
 
-        int randomFaculty = rand.nextInt(0, savedFaculties.size());
-        UNSAVED_STUDENT.setFaculty(savedFaculties.get(randomFaculty));
+        int randomNum = rand.nextInt(0, savedFaculties.size());
+        UNSAVED_STUDENT.setFaculty(savedFaculties.get(randomNum));
 
 //        Для метода PATCH localhost:port/students/{id}/avatar
         this.patchRestTemplate = testRestTemplate.getRestTemplate();
@@ -107,11 +108,13 @@ public class StudentControllerTest {
         facultyRepository.deleteAll();
         avatarRepository.deleteAll();
 
-        if (Files.exists(testAvatarsDir)) {
-            File directory = new File(testAvatarsDir.toUri());
-            Arrays.stream(directory.listFiles()).forEach(file -> file.delete());
+        if (Files.exists(testResourceDir)) {
+            File[] listFiles = new File(testResourceDir.toUri()).listFiles();
+            if (listFiles != null) {
+                Arrays.stream(listFiles).forEach(File::delete);
+            }
         }
-        Files.deleteIfExists(testAvatarsDir);
+        Files.deleteIfExists(testResourceDir);
     }
 
     @AfterAll
@@ -125,7 +128,6 @@ public class StudentControllerTest {
 
     @Test
     void createStudentsPositiveTest() {
-
 
         ResponseEntity<Student> responseEntity = testRestTemplate.postForEntity(
                 baseStudentUrl(),
@@ -157,6 +159,7 @@ public class StudentControllerTest {
 
     @Test
     void createStudentWithIllegalFieldsNegativeTest() {
+
         // Невалидное только имя
         UNSAVED_STUDENT.setName(null);
         List<Student> countStudentsBeforeAdding = studentRepository.findAll();
@@ -170,6 +173,7 @@ public class StudentControllerTest {
                 .isNotNull()
                 .matches("Value (.+?) of parameter (.+?) of student is invalid");
         assertThat(countStudentsBeforeAdding).isEqualTo(studentRepository.findAll());
+
         // Невалидный только возраст
         UNSAVED_STUDENT.setName("randomName");
         UNSAVED_STUDENT.setAge(0);
@@ -183,6 +187,7 @@ public class StudentControllerTest {
                 .isNotNull()
                 .matches("Value (.+?) of parameter (.+?) of student is invalid");
         assertThat(countStudentsBeforeAdding).isEqualTo(studentRepository.findAll());
+
         // Студент с faculty = null
         ResponseEntity<String> responseEntity2 = testRestTemplate.postForEntity(
                 baseStudentUrl(),
@@ -197,18 +202,18 @@ public class StudentControllerTest {
 
     @Test
     void getStudentPositiveTest() {
-        Student targetStudent = savedStudents.get(0);
+        Student expected = savedStudents.get(0);
 
         ResponseEntity<Student> responseEntity = testRestTemplate.getForEntity(
                 baseStudentUrl() + "/{id}",
                 Student.class,
-                targetStudent.getId());
+                expected.getId());
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody())
                 .isNotNull()
                 .usingRecursiveComparison()
-                .isEqualTo(targetStudent);
+                .isEqualTo(expected);
     }
 
     @Test
@@ -312,15 +317,15 @@ public class StudentControllerTest {
     @Test
     void updateStudentWithoutChangeFacultyPositiveTest() {
 
-        Student expected = savedStudents.get(0);
-        STUDENT_4_EDITED.setFaculty(expected.getFaculty());
+        Student targetStudent = savedStudents.get(0);
+        STUDENT_4_EDITED.setFaculty(targetStudent.getFaculty());
 
         ResponseEntity<Student> responseEntity = testRestTemplate.exchange(
                 baseStudentUrl() + "/{id}",
                 HttpMethod.PUT,
                 new HttpEntity<>(STUDENT_4_EDITED),
                 Student.class,
-                expected.getId());
+                targetStudent.getId());
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody()).isNotNull()
@@ -328,7 +333,7 @@ public class StudentControllerTest {
                 .ignoringFields("id", "faculty.students")
                 .isEqualTo(STUDENT_4_EDITED);
 
-        Optional<Student> fromDb = studentRepository.findById(expected.getId());
+        Optional<Student> fromDb = studentRepository.findById(targetStudent.getId());
         assertThat(fromDb).isPresent();
         assertThat(fromDb.get())
                 .usingRecursiveComparison()
@@ -414,7 +419,8 @@ public class StudentControllerTest {
 
         Optional<Student> fromDb = studentRepository.findById(expected.getId());
         assertThat(fromDb).isEmpty();
-        assertThat(studentRepository.findAll().size()).isNotEqualTo(repoSizeBeforeDeleting);
+        assertThat(studentRepository.findAll().size())
+                .isNotEqualTo(repoSizeBeforeDeleting);
     }
 
     @Test
@@ -465,7 +471,7 @@ public class StudentControllerTest {
         Optional<Avatar> fromAvatarRepo = avatarRepository.findById(studentFromDb.get().getAvatar().getId());
 
         assertThat(fromAvatarRepo).isPresent();
-        assertThat(fromAvatarRepo.get().getData()).isEqualTo(sentResource());
+        assertThat(fromAvatarRepo.get().getData()).isEqualTo(sentResourceBytes());
 
 //        Наличие в локальном хранилище - из БД берем только путь и смотрим есть по этому пути наш файл локально
         Path pathToLocalFile = Path.of(fromAvatarRepo.get().getFilePath());
@@ -475,60 +481,6 @@ public class StudentControllerTest {
         assertThat(Files.readAllBytes(pathToLocalFile))
                 .isNotEmpty()
                 .isEqualTo(AVATAR_1.getData());
-    }
-
-
-    @MethodSource
-    public static Stream<Arguments> provideParamsForGetAvatarPositiveTest() {
-        return Stream.of(
-                Arguments.of("/{id}/avatar?large=true"),   // Проверка метода получения изображения с диска
-                Arguments.of("/{id}/avatar?large=false")   // Проверка метода получения изображения из БД
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource("provideParamsForGetAvatarPositiveTest")
-//    @Test
-    void getAvatarPositiveTest(String url) throws IOException {
-
-//        given
-        Student student = savedStudents.get(0);
-        Files.createDirectories(testAvatarsDir);   // Без проверки Files.exists() тк AfterEach позаботился об удалении директорий/файлов
-        Files.write(Path.of(finalSavedResource().formatted(student)), Files.readAllBytes(testResoursePath()));
-
-        // Связываем студента и аватар внутри бд, тк getAvatar() ищет аватар исходя из студента и его поля Avatar
-        AVATAR_1.setId(null);
-        AVATAR_1.setFilePath(AVATAR_1.getFilePath().formatted(student));
-        AVATAR_1.setStudent(student);
-        Avatar savedAvatar = avatarRepository.save(AVATAR_1);
-
-        student.setAvatar(savedAvatar);
-        Student expected = studentRepository.save(student);
-
-//        invoking
-        ResponseEntity<byte[]> responseEntity = testRestTemplate.exchange(
-                baseStudentUrl() + url,
-                HttpMethod.GET,
-                RequestEntity.EMPTY,
-                new ParameterizedTypeReference<>() {
-                },
-                expected.getId()
-        );
-
-//        assertions
-        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(responseEntity.getBody())
-                .isNotNull()
-                .isEqualTo(AVATAR_1.getData());
-
-        HttpHeaders actual = new HttpHeaders();
-        actual.setContentType(MediaType.parseMediaType(AVATAR_1.getMediaType()));
-        actual.setContentLength(AVATAR_1.getData().length);
-
-        assertThat(responseEntity.getHeaders())
-                .isNotNull()
-                .containsAllEntriesOf(actual);
-        afterEach();
     }
 
     @Test
@@ -552,18 +504,70 @@ public class StudentControllerTest {
                 .isNotNull()
                 .matches("Student with (.+?) = (.+?) isn't found");
 
-        assertThat(Files.exists(testAvatarsDir))
+        assertThat(Files.exists(testResourceDir))
                 .isFalse();
-        assertThat(Files.exists(Path.of(finalSavedResource().formatted(targetStudent))))
+        assertThat(Files.exists(Path.of(sentResourcePath().formatted(targetStudent))))
                 .isFalse();
     }
 
-    @Test
-    void getAvatarIfStudentNotFoundNegativeTest() throws IOException {
+    @MethodSource
+    public static Stream<Arguments> provideParamsForGetAvatarTests() {
+        return Stream.of(
+                Arguments.of("/{id}/avatar?large=true"),   // Проверка метода получения изображения с диска
+                Arguments.of("/{id}/avatar?large=false")   // Проверка метода получения изображения из БД
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideParamsForGetAvatarTests")
+    void getAvatarPositiveTest(String url) throws IOException {
+
 //        given
         Student student = savedStudents.get(0);
-        Files.createDirectories(testAvatarsDir);
-        Files.write(Path.of(finalSavedResource().formatted(student)), Files.readAllBytes(testResoursePath()));
+        Files.createDirectories(testResourceDir);   // Без проверки Files.exists() тк AfterEach позаботился об удалении директорий/файлов
+        Files.write(Path.of(sentResourcePath().formatted(student)), Files.readAllBytes(testResoursePath()));
+
+        // Связываем студента и аватар внутри бд, тк getAvatar() ищет аватар исходя из студента и его поля Avatar
+        AVATAR_1.setId(null);
+        AVATAR_1.setFilePath(AVATAR_1.getFilePath().formatted(student));
+        AVATAR_1.setStudent(student);
+        Avatar savedAvatar = avatarRepository.save(AVATAR_1);
+
+        student.setAvatar(savedAvatar);
+        Student expectedStudent = studentRepository.save(student);
+
+//        invoking
+        ResponseEntity<byte[]> responseEntity = testRestTemplate.exchange(
+                baseStudentUrl() + url,
+                HttpMethod.GET,
+                RequestEntity.EMPTY,
+                new ParameterizedTypeReference<>() {
+                },
+                expectedStudent.getId()
+        );
+
+//        assertions
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody())
+                .isNotNull()
+                .isEqualTo(AVATAR_1.getData());
+
+        HttpHeaders expectedHeaders = new HttpHeaders();
+        expectedHeaders.setContentType(MediaType.parseMediaType(AVATAR_1.getMediaType()));
+        expectedHeaders.setContentLength(AVATAR_1.getData().length);
+
+        assertThat(responseEntity.getHeaders())
+                .isNotNull()
+                .containsAllEntriesOf(expectedHeaders);
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideParamsForGetAvatarTests")
+    void getAvatarIfStudentNotFoundNegativeTest(String url) throws IOException {
+//        given
+        Student student = savedStudents.get(0);
+        Files.createDirectories(testResourceDir);
+        Files.write(Path.of(sentResourcePath().formatted(student)), Files.readAllBytes(testResoursePath()));
 
         AVATAR_1.setId(null);
         AVATAR_1.setFilePath(AVATAR_1.getFilePath().formatted(student));
@@ -573,7 +577,7 @@ public class StudentControllerTest {
         studentRepository.save(student);
 
         long sizeBefore = 0;
-        try (Stream<Path> filesWalk = Files.walk(Paths.get(testAvatarsDir.toUri()))) {
+        try (Stream<Path> filesWalk = Files.walk(Paths.get(testResourceDir.toUri()))) {
             sizeBefore = filesWalk
                     .mapToLong(p -> p.toFile().length())
                     .sum();
@@ -582,7 +586,7 @@ public class StudentControllerTest {
         }
 
         ResponseEntity<String> responseEntity = testRestTemplate.exchange(
-                baseStudentUrl() + "/{id}/avatar",   // Не имеет значения откуда получать аватар, тк исключение возникнет раньше
+                baseStudentUrl() + url,
                 HttpMethod.GET,
                 RequestEntity.EMPTY,
                 String.class,
@@ -595,7 +599,7 @@ public class StudentControllerTest {
                 .matches("Student with (.+?) = (.+?) isn't found");
 
         long sizeAfter = 0;
-        try (Stream<Path> filesWalk = Files.walk(Paths.get(testAvatarsDir.toUri()))) {
+        try (Stream<Path> filesWalk = Files.walk(Paths.get(testResourceDir.toUri()))) {
             sizeAfter = filesWalk.mapToLong(p -> p.toFile().length())
                     .sum();
         } catch (IOException e) {
