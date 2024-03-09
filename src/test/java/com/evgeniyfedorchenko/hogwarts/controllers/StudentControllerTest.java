@@ -343,25 +343,32 @@ public class StudentControllerTest {
 
     @Test
     void updateStudentWithChangeFacultyPositiveTest() {
-        Student expected = savedStudents.get(0);
-
+        Student targetStudent = savedStudents.get(0);
+        Faculty oldFacultyOfTarget = targetStudent.getFaculty();
         // Ставим студенту "STUDENT_4_EDITED" факультет, отличный от факультета у студента "expected"
         for (Faculty faculty : savedFaculties) {
-            if (!faculty.equals(expected.getFaculty())) {
+            if (!faculty.equals(targetStudent.getFaculty())) {
                 STUDENT_4_EDITED.setFaculty(faculty);
             }
         }
         testRestTemplate.put(
                 baseStudentUrl() + "/{id}",
                 STUDENT_4_EDITED,
-                expected.getId());
+                targetStudent.getId());
 
-        Optional<Student> fromDb = studentRepository.findById(expected.getId());
-        assertThat(fromDb).isPresent();
-        assertThat(fromDb.get())
+        Optional<Student> actual = studentRepository.findById(targetStudent.getId());
+        assertThat(actual).isPresent();
+        assertThat(actual.get())
                 .usingRecursiveComparison()
                 .ignoringFields("id", "faculty.students")
                 .isEqualTo(STUDENT_4_EDITED);
+
+        // Если у студента произошла смена факультета, то в базе факультетов это должно быть отражено
+        assertThat(oldFacultyOfTarget.getStudents()).doesNotContain(targetStudent);
+
+        Optional<Faculty> oldFacultyOfStudent = facultyRepository.findById(actual.get().getFaculty().getId());
+        assertThat(oldFacultyOfStudent).isPresent();
+        assertThat(oldFacultyOfStudent.get().getStudents()).contains(targetStudent);
     }
 
 

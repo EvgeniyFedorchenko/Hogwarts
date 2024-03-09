@@ -24,13 +24,11 @@ public class Constants {
     public static final Faculty FACULTY_4 = new Faculty();
     public static final Faculty FACULTY_4_EDITED = new Faculty();
 
-
     /**
      * Директория, в которой сохраняется ресурс во время теста.
      * Удаляется после теста через @AfterEach
      */
     public static Path testResourceDir;
-
 
     /**
      * Путь, по которому должна находиться ресурс после окончания теста.
@@ -40,7 +38,6 @@ public class Constants {
     public static String sentResourcePath() {
         return testResourceDir + "\\%s." + getFilenameExtension(String.valueOf(testResoursePath()));
     }
-
 
     /**
      * Байты изображения, прочитанные из тестовых исходных ресурсов.
@@ -55,7 +52,6 @@ public class Constants {
 
     }
 
-
     /**
      * Путь к исходному тестовому ресурсу
      */
@@ -64,7 +60,6 @@ public class Constants {
     }
 
     public static final Avatar AVATAR_1 = new Avatar();
-
 
     public static final Student STUDENT_1 = new Student();
     public static final Student STUDENT_2 = new Student();
@@ -87,14 +82,12 @@ public class Constants {
         facultiesConstantsInitialize();
         avatarConstantsInitialize();
         studentsConstantsInitialize();
-
-
     }
 
     private static void facultiesConstantsInitialize() {
         Stream.of(FACULTY_1, FACULTY_2, FACULTY_3, FACULTY_4)
                 .forEach(faculty -> {
-                    faculty.setId(faker.random().nextLong(100, 100));
+                    faculty.setId(faker.random().nextLong(100, 200));
                     faculty.setName(faker.letterify("????????"));
                     faculty.setColor(Color.values()[faker.random().nextInt(Color.values().length)]);
                     faculty.setStudents(new ArrayList<>());
@@ -109,8 +102,11 @@ public class Constants {
 
     private static void avatarConstantsInitialize() {
         try {
-            AVATAR_1.setMediaType(String.valueOf(Files.probeContentType(testResoursePath())));
+            AVATAR_1.setId(faker.random().nextLong(100, 200));
+            AVATAR_1.setStudent(STUDENT_1);
+
             AVATAR_1.setFilePath(sentResourcePath());
+            AVATAR_1.setMediaType(String.valueOf(Files.probeContentType(testResoursePath())));
             AVATAR_1.setData(sentResourceBytes());
         } catch (IOException e) {
             throw new AvatarProcessingException("Test-avatar initialising filed", e);
@@ -123,10 +119,11 @@ public class Constants {
         Stream.of(STUDENT_1, STUDENT_2, STUDENT_3, STUDENT_4, STUDENT_4_EDITED,
                         STUDENT_WITHOUT_FACULTY, UNSAVED_STUDENT)
                 .forEach(student -> {
-                    student.setId(faker.random().nextLong(100, 100));
+                    student.setId(faker.random().nextLong(100, 200));
                     student.setName(faker.letterify("????????"));
                     student.setAge(faker.random().nextInt(18, 30));
                 });
+//        STUDENT_1.setAvatar(AVATAR_1);
 
         STUDENT_4_EDITED.setName(STUDENT_4.getName() + "Edited");
         STUDENT_4_EDITED.setFaculty(STUDENT_4.getFaculty());

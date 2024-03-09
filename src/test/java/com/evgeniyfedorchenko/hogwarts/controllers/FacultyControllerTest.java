@@ -4,6 +4,7 @@ package com.evgeniyfedorchenko.hogwarts.controllers;
 import com.evgeniyfedorchenko.hogwarts.entities.Color;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
+import com.evgeniyfedorchenko.hogwarts.repositories.AvatarRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.junit.jupiter.api.*;
@@ -54,6 +55,8 @@ class FacultyControllerTest {
     private FacultyRepository facultyRepository;
     @Autowired
     private StudentRepository studentRepository;
+    @Autowired
+    private AvatarRepository avatarRepository;
 
     @BeforeEach
     public void beforeEach() {
@@ -222,6 +225,7 @@ class FacultyControllerTest {
         Faculty faculty = facultyRepository.findFirstByName(FACULTY_1.getName()).orElseThrow();
         STUDENT_1.setFaculty(faculty);
         STUDENT_2.setFaculty(faculty);
+
         studentRepository.saveAll(List.of(STUDENT_1, STUDENT_2));
 
         ResponseEntity<List<Student>> responseEntity = testRestTemplate.exchange(
@@ -288,15 +292,14 @@ class FacultyControllerTest {
         assertThat(responseEntity.getBody())
                 .isNotNull()
                 .usingRecursiveComparison()
-                .ignoringFields("id", "student")
+                .ignoringFields("id", "students")   // Поле students аннотировано @JsonIgnore
                 .isEqualTo(FACULTY_4_EDITED);
 
         assertThat(facultyRepository.findById(faculty.getId())).isPresent();
         assertThat(responseEntity.getBody())
                 .usingRecursiveComparison()
-                .ignoringFields("id", "student")
+                .ignoringFields("id", "students")
                 .isNotEqualTo(FACULTY_4);
-
     }
 
     @Test
