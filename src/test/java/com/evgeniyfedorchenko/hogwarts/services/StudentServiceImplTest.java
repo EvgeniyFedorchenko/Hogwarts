@@ -18,11 +18,11 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-import static com.evgeniyfedorchenko.hogwarts.services.Constants.*;
+import static com.evgeniyfedorchenko.hogwarts.Constants.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,7 +39,7 @@ class StudentServiceImplTest {
 
     @BeforeEach
     void BeforeEach() {
-        constantsInitialisation();
+        testConstantsInitialisation();
     }
 
     @Test
@@ -52,7 +52,7 @@ class StudentServiceImplTest {
 
         when(facultyRepositoryMock.findById(FACULTY_1.getId())).thenReturn(Optional.of(FACULTY_1));
         when(studentRepositoryMock.save(incompleteStudent)).thenReturn(STUDENT_3);
-        when(facultyServiceMock.updateFaculty(FACULTY_3.getId(), FACULTY_3)).thenReturn(Optional.of(FACULTY_3));
+        when(facultyServiceMock.updateFaculty(eq(FACULTY_1.getId()), any(Faculty.class))).thenReturn(Optional.of(FACULTY_3));
 
         Student actual = out.createStudent(STUDENT_3);
         assertThat(actual)
@@ -93,20 +93,19 @@ class StudentServiceImplTest {
 
     @Test
     void updateStudentPositiveTest() {
-
+        STUDENT_4.setFaculty(FACULTY_1);
         STUDENT_4_EDITED.setFaculty(FACULTY_1);
         when(studentRepositoryMock.findById(STUDENT_4.getId())).thenReturn(Optional.of(STUDENT_4));
-        when(studentRepositoryMock.save(STUDENT_4_EDITED)).thenReturn(STUDENT_4_EDITED);
+        when(studentRepositoryMock.save(any(Student.class))).thenReturn(STUDENT_4_EDITED);
         when(facultyRepositoryMock.findById(STUDENT_4_EDITED.getFaculty().getId()))
                 .thenReturn(Optional.of(STUDENT_4_EDITED.getFaculty()));
 
-        Student actual = out.updateStudent(STUDENT_4_EDITED.getId(), STUDENT_4_EDITED).get();
+        Student actual = out.updateStudent(STUDENT_4.getId(), STUDENT_4_EDITED).get();
         assertTrue(actual.equals(STUDENT_4_EDITED));
     }
 
     @Test
     void updateStudentWithNegativeIdTest() {
-        when(studentRepositoryMock.findById(-1L)).thenReturn(Optional.empty());
 
         Student invalidStudent = new Student();
         invalidStudent.setId(-1L);
@@ -136,7 +135,7 @@ class StudentServiceImplTest {
 
     @Test
     void updateStudentWithInvalidParamsTest() {
-        assertThatThrownBy(() -> out.updateStudent(null, new Student()))
+        assertThatThrownBy(() -> out.updateStudent(1L, new Student()))
                 .isInstanceOf(IllegalStudentFieldsException.class);
     }
 
