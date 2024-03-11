@@ -1,7 +1,7 @@
 package com.evgeniyfedorchenko.hogwarts.entities;
 
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
@@ -18,9 +18,11 @@ public class Student {
     private String name;
     private int age;
 
-    @NotNull
-    @ManyToOne
-    @JoinColumn(name = "faculty_id")
+    @NotNull                                    // При создании студента необходимо передать факультет
+    @ManyToOne(fetch = FetchType.EAGER)          // Определение связи (с ленивой загрузкой зависимого объекта)
+    @JoinColumn(name = "faculty_id")            // Определение имени колонки в БД
+    @JsonProperty("facultyId")                  // Определение имени поля в JSON
+    @JsonIdentityReference(alwaysAsId = true)   // JSON: включать в объект только id факультета (во избежание рекурсии)
     private Faculty faculty;
 
     @OneToOne
