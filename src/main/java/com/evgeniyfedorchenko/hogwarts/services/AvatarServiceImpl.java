@@ -46,25 +46,28 @@ public class AvatarServiceImpl implements AvatarService {
     @Override
     @Transactional
     public boolean downloadToDb(Student student, MultipartFile avatarFile) {
-
-        byte[] data;
+        Avatar avatar;
         try {
-            data = avatarFile.getBytes();
-        } catch (IOException e) {     // Если проблемы с изображением
+            avatar = fillAvatar(student, avatarFile);
+        } catch (IOException e) {
             throw new AvatarProcessingException("Unable to read avatar-data of student with id = " + student.getId(), e);
         }
 
-        Avatar avatar = avatarRepository.findByStudent_Id(student.getId()).orElseGet(Avatar::new);
-        avatar.setStudent(student);
-        avatar.setFilePath(avatarsDir + "\\" + student + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
-        avatar.setMediaType(avatarFile.getContentType());
-        avatar.setData(data);
-
         Avatar savedAvatar = avatarRepository.save(avatar);
-
         student.setAvatar(savedAvatar);
         studentRepository.save(student);
         return true;
+    }
+
+    private Avatar fillAvatar(Student student, MultipartFile avatarFile) throws IOException {
+
+        Avatar avatar = avatarRepository.findByStudent_Id(student.getId()).orElseGet(Avatar::new);
+        avatar.setFilePath(avatarsDir + "\\" + student + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
+        avatar.setMediaType(avatarFile.getContentType());
+        avatar.setData(avatarFile.getBytes());
+        avatar.setStudent(student);
+
+        return avatar;
     }
 
     @Override
@@ -88,11 +91,8 @@ public class AvatarServiceImpl implements AvatarService {
     public Avatar getFromLocal(Long avatarId) throws IOException {
         Avatar avatar = findAvatar(avatarId);
         Avatar afr = new Avatar();
-        byte[] data;
 
-        data = Files.readAllBytes(Path.of(avatar.getFilePath()));
-
-        afr.setData(data);
+        afr.setData(Files.readAllBytes(Path.of(avatar.getFilePath())));
         afr.setMediaType(avatar.getMediaType());
         return afr;
     }

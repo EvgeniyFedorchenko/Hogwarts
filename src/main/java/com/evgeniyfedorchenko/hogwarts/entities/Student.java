@@ -18,10 +18,9 @@ public class Student {
     private String name;
     private int age;
 
-    @NotNull                                    // При создании студента необходимо передать факультет
-    @ManyToOne(fetch = FetchType.EAGER)          // Определение связи (с ленивой загрузкой зависимого объекта)
-    @JoinColumn(name = "faculty_id")            // Определение имени колонки в БД
-    @JsonProperty("facultyId")                  // Определение имени поля в JSON
+    @NotNull
+    @ManyToOne
+    @JoinColumn(name = "faculty_id")
     @JsonIdentityReference(alwaysAsId = true)   // JSON: включать в объект только id факультета (во избежание рекурсии)
     private Faculty faculty;
 

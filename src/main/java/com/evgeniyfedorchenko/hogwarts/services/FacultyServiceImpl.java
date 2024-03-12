@@ -9,7 +9,6 @@ import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,12 +31,7 @@ public class FacultyServiceImpl implements FacultyService {
         if (facultyRepository.existsByName(faculty.getName())) {
             throw new FacultyAlreadyExistsException("Such a faculty already exists");
         }
-        Faculty newFaculty = new Faculty();
-        newFaculty.setName(faculty.getName());
-        newFaculty.setColor(faculty.getColor());
-        newFaculty.setStudents(new ArrayList<>());
-
-        return facultyRepository.save(newFaculty);
+        return facultyRepository.save(fillFaculty(faculty, new Faculty()));
     }
 
     @Override
@@ -48,6 +42,7 @@ public class FacultyServiceImpl implements FacultyService {
 
     @Override
     public Optional<Faculty> updateFaculty(Long id, Faculty faculty) {
+
         validateFaculty(faculty);
 
         Optional<Faculty> byId = facultyRepository.findById(id);
@@ -55,19 +50,21 @@ public class FacultyServiceImpl implements FacultyService {
             return Optional.empty();
         }
 
-        // Если факультет с таким именем уже есть в БД и это другой факультет (у него другой id) - прерываем метод
         Optional<Faculty> firstByName = facultyRepository.findFirstByName(faculty.getName());
         if (firstByName.isPresent() && !id.equals(firstByName.get().getId())) {
             throw new FacultyAlreadyExistsException("This name already exists");
 
-            // Иначе - берем факультет и меняем его
         } else {
-            Faculty oldFaculty = byId.get();
-            oldFaculty.setName(faculty.getName());
-            oldFaculty.setColor(faculty.getColor());
-            oldFaculty.setStudents(faculty.getStudents());
+            Faculty oldFaculty = fillFaculty(faculty, byId.get());
             return Optional.of(facultyRepository.save(oldFaculty));
         }
+    }
+
+    private Faculty fillFaculty(Faculty src, Faculty dest) {
+        dest.setName(src.getName());
+        dest.setColor(src.getColor());
+        dest.setStudents(src.getStudents());
+        return dest;
     }
 
     @Override
@@ -75,6 +72,8 @@ public class FacultyServiceImpl implements FacultyService {
 
         Optional<Faculty> facultyOpt = facultyRepository.findById(id);
         if (facultyOpt.isPresent()) {
+            List<Student> students = facultyOpt.get().getStudents();
+            studentRepository.deleteAll(students);
             facultyRepository.delete(facultyOpt.get());
             return facultyOpt;
         } else {

@@ -57,6 +57,27 @@ public class Faculty {
         this.students = students;
     }
 
+    /**
+     * @return - возвращает Faculty с обновленными студентами
+     */
+    public Faculty addStudent(Student student) {
+        if (students == null) {
+            students = new ArrayList<>();
+        }
+        student.setFaculty(this);
+        this.students.add(student);
+        return this;
+    }
+
+    /**
+     * @return - возвращает Faculty с обновленными студентами
+     */
+    public Faculty removeStudent(Student student) {
+        student.setFaculty(null);
+        this.students.remove(student);
+        return this;
+    }
+
     @Override
     public boolean equals(Object otherFaculty) {
         if (this == otherFaculty) {
@@ -66,9 +87,7 @@ public class Faculty {
             return false;
         }
         Faculty faculty = (Faculty) otherFaculty;
-        return Objects.equals(id, faculty.id)
-               && Objects.equals(name, faculty.name)
-               && color == faculty.color;
+        return Objects.equals(id, faculty.id);
     }
 
     @Override

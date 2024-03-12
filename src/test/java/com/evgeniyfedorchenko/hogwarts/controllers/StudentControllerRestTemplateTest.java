@@ -6,6 +6,7 @@ import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.repositories.AvatarRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.junit.jupiter.api.AfterAll;
@@ -45,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class StudentControllerTest {
+public class StudentControllerRestTemplateTest {
 
     @Container
     private static final PostgreSQLContainer<?> postgresContainer =
@@ -70,12 +71,27 @@ public class StudentControllerTest {
     @Autowired
     private StudentRepository studentRepository;
 
-    private List<Faculty> savedFaculties;
-    private List<Student> savedStudents;
-
     @Autowired
     private TestRestTemplate testRestTemplate;
     private RestTemplate patchRestTemplate;
+
+    private List<Faculty> savedFaculties;
+    private List<Student> savedStudents;
+    @Autowired
+    ObjectMapper objectMapper;
+
+    private String getFormattedBody(Student student) {
+        return """
+                {
+                    "id": %d,
+                    "name": "%s",
+                    "age": %d,
+                    "faculty": {
+                        "id": %d
+                  }
+                }""".formatted(student.getId(), student.getName(), student.getAge(), student.getFaculty().getId());
+    }
+
 
     @BeforeEach
     public void beforeEach() {
@@ -129,9 +145,13 @@ public class StudentControllerTest {
     @Test
     void createStudentsPositiveTest() {
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Type", "application/json");
+
+
         ResponseEntity<Student> responseEntity = testRestTemplate.postForEntity(
                 baseStudentUrl(),
-                UNSAVED_STUDENT,
+                new HttpEntity<>(getFormattedBody(UNSAVED_STUDENT), headers),
                 Student.class);
 
         // Проверка ответа от сервера
@@ -139,7 +159,7 @@ public class StudentControllerTest {
         assertThat(responseEntity.getBody())
                 .isNotNull()
                 .usingRecursiveComparison()
-                .ignoringFields("id", "faculty.students")
+                .ignoringFields("id", "faculty")
                 .isEqualTo(UNSAVED_STUDENT);
 
         // Проверка, что в бд и правда сохранен нужный объект
@@ -213,6 +233,7 @@ public class StudentControllerTest {
         assertThat(responseEntity.getBody())
                 .isNotNull()
                 .usingRecursiveComparison()
+                .ignoringFields("faculty")
                 .isEqualTo(expected);
     }
 
@@ -320,17 +341,21 @@ public class StudentControllerTest {
         Student targetStudent = savedStudents.get(0);
         STUDENT_4_EDITED.setFaculty(targetStudent.getFaculty());
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Type", "application/json");
+
         ResponseEntity<Student> responseEntity = testRestTemplate.exchange(
                 baseStudentUrl() + "/{id}",
                 HttpMethod.PUT,
-                new HttpEntity<>(STUDENT_4_EDITED),
+                new HttpEntity<>(getFormattedBody(STUDENT_4_EDITED), headers),
                 Student.class,
-                targetStudent.getId());
+                targetStudent.getId()
+        );
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody()).isNotNull()
                 .usingRecursiveComparison()
-                .ignoringFields("id", "faculty.students")
+                .ignoringFields("id", "faculty")
                 .isEqualTo(STUDENT_4_EDITED);
 
         Optional<Student> fromDb = studentRepository.findById(targetStudent.getId());
@@ -345,16 +370,30 @@ public class StudentControllerTest {
     void updateStudentWithChangeFacultyPositiveTest() {
         Student targetStudent = savedStudents.get(0);
         Faculty oldFacultyOfTarget = targetStudent.getFaculty();
-        // Ставим студенту "STUDENT_4_EDITED" факультет, отличный от факультета у студента "expected"
+
+        // Ставим студенту "STUDENT_4_EDITED" факультет, отличный от факультета у студента "targetStudent"
         for (Faculty faculty : savedFaculties) {
             if (!faculty.equals(targetStudent.getFaculty())) {
                 STUDENT_4_EDITED.setFaculty(faculty);
             }
         }
-        testRestTemplate.put(
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Type", "application/json");
+
+        ResponseEntity<Student> responseEntity = testRestTemplate.exchange(
                 baseStudentUrl() + "/{id}",
-                STUDENT_4_EDITED,
-                targetStudent.getId());
+                HttpMethod.PUT,
+                new HttpEntity<>(getFormattedBody(STUDENT_4_EDITED), headers),
+                Student.class,
+                targetStudent.getId()
+        );
+
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).isNotNull()
+                .usingRecursiveComparison()
+                .ignoringFields("id", "faculty")
+                .isEqualTo(STUDENT_4_EDITED);
 
         Optional<Student> actual = studentRepository.findById(targetStudent.getId());
         assertThat(actual).isPresent();
