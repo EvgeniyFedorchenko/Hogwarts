@@ -10,6 +10,8 @@ import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import com.evgeniyfedorchenko.hogwarts.services.FacultyServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.Annotated;
+import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -40,7 +42,7 @@ public class FacultyControllerWebMvcTest {
 
     @Autowired
     private MockMvc mockMvc;
-    @Autowired
+
     private ObjectMapper objectMapper;
 
     @MockBean
@@ -54,7 +56,20 @@ public class FacultyControllerWebMvcTest {
 
     @BeforeEach
     public void beforeEach() {
+
+        TEST_lIST_OF_4_FACULTY.forEach(faculty -> faculty.setStudents(new ArrayList<>()));
+
         testConstantsInitialisation();
+        objectMapper = new ObjectMapper();
+    }
+
+    private void customizeObjectMapper() {
+        objectMapper.setAnnotationIntrospector(new JacksonAnnotationIntrospector() {
+            @Override
+            protected boolean _isIgnorable(Annotated a) {
+                return super._isIgnorable(a) || a.getRawType() == Faculty.class;
+            }
+        });
     }
 
     @Test
@@ -155,7 +170,6 @@ public class FacultyControllerWebMvcTest {
 
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-
         List<Faculty> actual = objectMapper.readValue(response, new TypeReference<>() {});
         assertThat(actual).containsOnly(FACULTY_1, FACULTY_2);
     }
@@ -172,7 +186,6 @@ public class FacultyControllerWebMvcTest {
 
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-
         List<Faculty> actual = objectMapper.readValue(response, new TypeReference<>() {});
         assertThat(actual).containsOnly(FACULTY_1, FACULTY_2);
     }
@@ -212,6 +225,7 @@ public class FacultyControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
+        customizeObjectMapper();
         List<Student> actual = objectMapper.readValue(response, new TypeReference<>() {});
         assertThat(actual).isEqualTo(FACULTY_1.getStudents());
     }

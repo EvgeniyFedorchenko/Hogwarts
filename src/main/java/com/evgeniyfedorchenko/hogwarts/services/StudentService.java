@@ -18,11 +18,9 @@ public interface StudentService {
 
     Optional<Student> deleteStudent(Long id);
 
-    List<Student> findStudentsByExactAge(int age);
+    List<Student> findStudentsByAge(int age, int upTo);
 
-    List<Student> findStudentsByAgeBetween(int min, int max);
-
-    Optional<Faculty> findFaculty(Long id);
+    Optional<Faculty> getFaculty(Long studentId);
 
     boolean setAvatar(Long id, MultipartFile avatarFile);
 

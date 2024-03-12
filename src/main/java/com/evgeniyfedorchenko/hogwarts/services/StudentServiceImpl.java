@@ -21,41 +21,28 @@ public class StudentServiceImpl implements StudentService {
     private final StudentRepository studentRepository;
     private final FacultyRepository facultyRepository;
     private final AvatarService avatarService;
-    private final FacultyService facultyService;
 
     public StudentServiceImpl(StudentRepository studentRepository,
                               FacultyRepository facultyRepository,
-                              AvatarService avatarService,
-                              FacultyService facultyService) {
+                              AvatarService avatarService) {
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
         this.avatarService = avatarService;
-        this.facultyService = facultyService;
     }
 
     @Override
     public Student createStudent(Student student) {
         validateStudentsFields(student);
-        checkExistenceFaculty(student);
+        validateFacultyFields(student.getFaculty());
 
-        Student newStudent = new Student();
-        newStudent.setName(student.getName());
-        newStudent.setAge(student.getAge());
-        newStudent.setFaculty(student.getFaculty());
+        Faculty findedFaculty = findFaculty(student.getFaculty().getId());
+        Student savedStudent = studentRepository.save(fillStudent(student, new Student()));
 
-        enrollStudentInFaculty(newStudent);   // Говорим факультету, что у него новый студент
-        return studentRepository.save(newStudent);
+        findedFaculty.addStudent(savedStudent);
+        facultyRepository.save(findedFaculty);
+
+        return savedStudent;
     }
-
-    private void enrollStudentInFaculty(Student student) {
-        Faculty faculty = student.getFaculty();
-        List<Student> newStudents = faculty.getStudents();
-        newStudents.add(student);
-        faculty.setStudents(newStudents);
-
-        facultyService.updateFaculty(faculty.getId(), faculty);
-    }
-
 
     @Override
     public Optional<Student> findStudent(Long id) {
@@ -73,35 +60,27 @@ public class StudentServiceImpl implements StudentService {
         if (studentById.isEmpty()) {
             return Optional.empty();
         }
-
-        Faculty findedFaculty = checkExistenceFaculty(student);   // Валидация факультета
-
-        Student oldStudent = studentById.get();
-        oldStudent.setName(student.getName());
-        oldStudent.setAge(student.getAge());
-
-        // Если студент меняет факультет - из старого его выгоняем (просто обновляем старый факультет), а в новый зачисляем
-        if (!oldStudent.getFaculty().equals(student.getFaculty())) {
-            expelStudentFromFaculty(oldStudent);   // Отчисление из старого факультета
-            oldStudent.setFaculty(findedFaculty);
-            enrollStudentInFaculty(oldStudent);   // Зачисление в новый факультет
-        } else {
-            oldStudent.setFaculty(student.getFaculty());
-        }
-
-        if (student.getAvatar() != null) {
-            oldStudent.setAvatar(student.getAvatar());
-        }
-        return Optional.of(studentRepository.save(oldStudent));
+        validateFacultyFields(student.getFaculty());
+        return Optional.of(studentRepository.save(fillStudent(student, studentById.get())));
     }
 
-    private void expelStudentFromFaculty(Student oldStudent) {
-        Faculty oldFaculty = oldStudent.getFaculty();
-        List<Student> newStudents = oldFaculty.getStudents();
-        newStudents.remove(oldStudent);
-        oldFaculty.setStudents(newStudents);
+    private Student fillStudent(Student src, Student dest) {
 
-        facultyService.updateFaculty(oldFaculty.getId(), oldFaculty);
+        Faculty findedFaculty = findFaculty(src.getFaculty().getId());
+
+        dest.setName(src.getName());
+        dest.setAge(src.getAge());
+        dest.setAvatar(src.getAvatar());
+
+//        Если меняется факультет - обновляем списки студентов у нового и старого факультета
+//        dest.getFaculty() может быть null, если мы пришли сюда из метода create()
+        if (dest.getFaculty() != null && !dest.getFaculty().equals(findedFaculty)) {
+            facultyRepository.save(dest.getFaculty().removeStudent(dest));
+            facultyRepository.save(findedFaculty.addStudent(dest));
+        } else {
+            dest.setFaculty(findedFaculty);
+        }
+        return dest;
     }
 
     @Override
@@ -117,21 +96,14 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public List<Student> findStudentsByExactAge(int age) {
-        return studentRepository.findByAge(age);
+    public List<Student> findStudentsByAge(int age, int upTo) {
+        return upTo == -1L ? studentRepository.findByAge(age) : studentRepository.findByAgeBetween(age, upTo);
     }
 
     @Override
-    public List<Student> findStudentsByAgeBetween(int min, int max) {
-        /* Можно не вызывать тут findStudentsByExactAge(), а обратиться сразу к репозиторию, а из интерфейса
-           вообще удалить этот метод за ненадобностью, но нме кажется лучше его оставить для большей универсальности интерфейса */
-        return max == -1L ? findStudentsByExactAge(min) : studentRepository.findByAgeBetween(min, max);
-    }
-
-    @Override
-    public Optional<Faculty> findFaculty(Long id) {
-        Optional<Student> studentOpt = studentRepository.findById(id);
-        return studentOpt.map(Student::getFaculty);
+    public Optional<Faculty> getFaculty(Long studentId) {
+        return studentRepository.findById(studentId)
+                .map(Student::getFaculty);
     }
 
     @Override
@@ -140,7 +112,7 @@ public class StudentServiceImpl implements StudentService {
                 .orElseThrow(() ->
                         new StudentNotFoundException("Student with ID " + studentId + "not found", "id", String.valueOf(studentId)));
 
-        return  avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
+        return avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
     }
 
     @Override
@@ -157,28 +129,28 @@ public class StudentServiceImpl implements StudentService {
         }
     }
 
-
     private void validateStudentsFields(Student student) {
         if (student.getName() == null) {
             throw new IllegalStudentFieldsException(
                     "Student name cannot be null or empty", "name", student.getName());
-        }
-        if (student.getAge() <= 0) {
+        } else if (student.getAge() <= 0) {
             throw new IllegalStudentFieldsException(
                     "Student age cannot be equal zero", "age", String.valueOf(student.getAge()));
         }
     }
 
-    private Faculty checkExistenceFaculty(Student student) {
-
-        if (student.getFaculty() == null || student.getFaculty().getId() == null) {
+    private void validateFacultyFields(Faculty faculty) {
+        if (faculty == null || faculty.getId() == null) {
             throw new IllegalStudentFieldsException("Faculty or its ID must not be null", "faculty", "empty");
-
         }
-        Long facultyId = student.getFaculty().getId();
+    }
+
+    private Faculty findFaculty(Long facultyId) {
         return facultyRepository.findById(facultyId).orElseThrow(() ->
-                new FacultyNotFoundException("Faculty with ID " + facultyId + "not found",
+                new FacultyNotFoundException(
+                        "Faculty with ID " + facultyId + "not found",
                         "id",
-                        String.valueOf(facultyId)));
+                        String.valueOf(facultyId)
+                ));
     }
 }

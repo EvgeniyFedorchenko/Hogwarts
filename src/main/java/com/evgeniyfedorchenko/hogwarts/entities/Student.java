@@ -1,7 +1,7 @@
 package com.evgeniyfedorchenko.hogwarts.entities;
 
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
@@ -21,6 +21,7 @@ public class Student {
     @NotNull
     @ManyToOne
     @JoinColumn(name = "faculty_id")
+    @JsonIdentityReference(alwaysAsId = true)   // JSON: включать в объект только id факультета (во избежание рекурсии)
     private Faculty faculty;
 
     @OneToOne

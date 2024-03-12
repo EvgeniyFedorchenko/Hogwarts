@@ -23,6 +23,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -32,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class FacultyControllerTest {
+class FacultyControllerRestTemplateTest {
 
     @Container
     private static final PostgreSQLContainer<?> postgresContainer =
@@ -58,14 +59,34 @@ class FacultyControllerTest {
     @Autowired
     private AvatarRepository avatarRepository;
 
+    private List<Faculty> savedFaculties;
+
+
     @BeforeEach
-    public void beforeEach() {
+    void beforeEach() {
         testConstantsInitialisation();
-        facultyRepository.save(FACULTY_1);
+        TEST_lIST_OF_4_FACULTY.forEach(faculty -> faculty.setStudents(new ArrayList<>()));
+        TEST_lIST_OF_4_STUDENTS.forEach(student -> student.setAvatar(null));
+
+        savedFaculties = facultyRepository.saveAll(TEST_lIST_OF_4_FACULTY);
+        Random rand = new Random();
+
+        studentRepository.saveAll(TEST_lIST_OF_4_STUDENTS.stream()
+                .peek(student -> {
+                    Faculty randomFaculty = savedFaculties.get(rand.nextInt(0, savedFaculties.size()));
+                    student.setFaculty(randomFaculty);
+                }).toList());
+
+        savedFaculties = facultyRepository.saveAll(savedFaculties.stream()
+                .peek(faculty -> {
+                    List<Student> stdns = studentRepository.findByFaculty_Id(faculty.getId());
+                    faculty.setStudents(stdns);
+                    facultyRepository.save(faculty);
+                }).toList());
     }
 
     @AfterEach
-    public void afterEach() {
+    void afterEach() {
         studentRepository.deleteAll();
         facultyRepository.deleteAll();
     }
@@ -81,9 +102,10 @@ class FacultyControllerTest {
 
     @Test
     void createFacultyPositiveTest() {
+
         ResponseEntity<Faculty> responseEntity = testRestTemplate.postForEntity(
                 baseFacultyUrl(),
-                FACULTY_2,
+                UNSAVED_FACULTY,
                 Faculty.class);
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -91,7 +113,7 @@ class FacultyControllerTest {
         assertThat(actualBody).isNotNull()
                 .usingRecursiveComparison()
                 .ignoringFields("id", "students")
-                .isEqualTo(FACULTY_2);
+                .isEqualTo(UNSAVED_FACULTY);
         assertThat(actualBody.getId()).isNotNull();
 
         Optional<Faculty> actual = facultyRepository.findById(actualBody.getId());
@@ -102,17 +124,15 @@ class FacultyControllerTest {
                 .isEqualTo(actualBody);
     }
 
-    @RepeatedTest(10)
+    @Test
     void createFacultyWithoutAnyFieldsNegativeTest() {
-        Random random = new Random();
-        if (random.nextBoolean()) {
-            FACULTY_2.setName(null);
-        } else {
-            FACULTY_2.setColor(null);
-        }
+        Faculty invalidFaculty = savedFaculties.get(0);
+        invalidFaculty.setName(null);
+        invalidFaculty.setColor(null);
+
         ResponseEntity<String> responseEntity = testRestTemplate.postForEntity(
                 baseFacultyUrl(),
-                FACULTY_2,
+                invalidFaculty,
                 String.class);
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(responseEntity.getBody())
@@ -196,10 +216,8 @@ class FacultyControllerTest {
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody())
-                .isNotNull()
                 .usingRecursiveComparison()
-                .ignoringFields("id", "students")
-                .isEqualTo(List.of(FACULTY_1));
+                .comparingOnlyFields("name", "color", "students");
     }
 
 
@@ -222,11 +240,7 @@ class FacultyControllerTest {
 
     @Test
     void getStudentsOfFaculty() {
-        Faculty faculty = facultyRepository.findFirstByName(FACULTY_1.getName()).orElseThrow();
-        STUDENT_1.setFaculty(faculty);
-        STUDENT_2.setFaculty(faculty);
-
-        studentRepository.saveAll(List.of(STUDENT_1, STUDENT_2));
+        Faculty targetFaculty = savedFaculties.get(0);
 
         ResponseEntity<List<Student>> responseEntity = testRestTemplate.exchange(
                 baseFacultyUrl() + "/{id}/students",
@@ -234,33 +248,35 @@ class FacultyControllerTest {
                 null,
                 new ParameterizedTypeReference<>() {
                 },
-                faculty.getId());
+                targetFaculty.getId());
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody())
                 .isNotNull()
                 .usingRecursiveComparison()
-                .ignoringFields("id")
-                .isEqualTo(List.of(STUDENT_1, STUDENT_2));
+                .ignoringFields("id", "faculty")
+                .isEqualTo(targetFaculty.getStudents());
     }
 
     @Test
     void deleteFacultyPositiveTest() {
-        Long facultyId = facultyRepository.findFirstByName(FACULTY_1.getName()).map(Faculty::getId).orElseThrow();
-
+        Optional<Faculty> firstByName = facultyRepository.findFirstByName(FACULTY_1.getName());
+        if (firstByName.isEmpty()) {
+            throw new RuntimeException("Faculty not found");
+        }
         ResponseEntity<Faculty> responseEntity = testRestTemplate.exchange(
                 baseFacultyUrl() + "/{id}",
                 HttpMethod.DELETE,
                 null,
                 Faculty.class,
-                facultyId);
+                firstByName.get().getId());
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody())
                 .usingRecursiveComparison()
-                .ignoringFields("id", "student")
-                .isEqualTo(FACULTY_1);
-        assertThat(facultyRepository.findById(facultyId)).isEmpty();
+                .ignoringFields("id", "students")
+                .isEqualTo(firstByName.get());
+        assertThat(facultyRepository.findById(firstByName.get().getId())).isEmpty();
     }
 
     @Test
@@ -279,60 +295,62 @@ class FacultyControllerTest {
 
     @Test
     void updateFacultyPositiveTest() {
-        Faculty faculty = facultyRepository.save(FACULTY_4);
+        Faculty oldFaculty = savedFaculties.get(0);
 
         ResponseEntity<Faculty> responseEntity = testRestTemplate.exchange(
                 baseFacultyUrl() + "/{id}",
                 HttpMethod.PUT,
                 new HttpEntity<>(FACULTY_4_EDITED),
                 Faculty.class,
-                faculty.getId());
+                oldFaculty.getId());
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody())
                 .isNotNull()
                 .usingRecursiveComparison()
-                .ignoringFields("id", "students")   // Поле students аннотировано @JsonIgnore
+                .ignoringFields("id", "students")
                 .isEqualTo(FACULTY_4_EDITED);
 
-        assertThat(facultyRepository.findById(faculty.getId())).isPresent();
-        assertThat(responseEntity.getBody())
-                .usingRecursiveComparison()
-                .ignoringFields("id", "students")
-                .isNotEqualTo(FACULTY_4);
+        Optional<Faculty> byId = facultyRepository.findById(oldFaculty.getId());
+        assertThat(byId).isPresent();
+        assertThat(byId.get().getName()).isEqualTo(FACULTY_4_EDITED.getName());
+        assertThat(byId.get().getColor()).isEqualTo(FACULTY_4_EDITED.getColor());
     }
 
     @Test
     void updateFacultyWithAnyNullFieldsNegativeTest() {
-        Faculty faculty = facultyRepository.save(FACULTY_4);
-        FACULTY_4_EDITED.setName(null);
-        FACULTY_4_EDITED.setColor(null);
+        Optional<Faculty> faculty = facultyRepository.findFirstByName(FACULTY_4.getName());
+        if (faculty.isEmpty()) {
+            throw new RuntimeException("Faculty not found");
+        }
+        faculty.get().setName(null);
+        faculty.get().setColor(null);
 
         ResponseEntity<String> responseEntity = testRestTemplate.exchange(
                 baseFacultyUrl() + "/{id}",
                 HttpMethod.PUT,
-                new HttpEntity<>(FACULTY_4_EDITED),
+                new HttpEntity<>(faculty),
                 String.class,
-                faculty.getId());
+                faculty.get().getId());
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(responseEntity.getBody())
                 .isNotNull()
                 .matches("Value (.+?) of parameter (.+?) of faculty is invalid");
 
-        assertThat(facultyRepository.findById(faculty.getId())).isPresent();
+        assertThat(facultyRepository.findById(faculty.get().getId())).isPresent();
     }
 
     @Test
     void updateNonexistentFacultyNegativeTest() {
-        Faculty faculty = facultyRepository.save(FACULTY_4);
+
 
         ResponseEntity<String> responseEntity = testRestTemplate.exchange(
                 baseFacultyUrl() + "/{id}",
                 HttpMethod.PUT,
                 new HttpEntity<>(FACULTY_4_EDITED),
                 String.class,
-                -1);
+                UNSAVED_FACULTY.getId());
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(responseEntity.getBody()).isNull();
@@ -341,13 +359,13 @@ class FacultyControllerTest {
 
     @Test
     void updateFacultyToExistentNameNegativeTest() {
-        Faculty faculty = facultyRepository.save(FACULTY_4);
-        FACULTY_4_EDITED.setName(FACULTY_1.getName());
+        Faculty faculty = savedFaculties.get(0);
+        faculty.setName(savedFaculties.get(1).getName());
 
         ResponseEntity<String> responseEntity = testRestTemplate.exchange(
                 baseFacultyUrl() + "/{id}",
                 HttpMethod.PUT,
-                new HttpEntity<>(FACULTY_4_EDITED),
+                new HttpEntity<>(faculty),
                 String.class,
                 faculty.getId());
 

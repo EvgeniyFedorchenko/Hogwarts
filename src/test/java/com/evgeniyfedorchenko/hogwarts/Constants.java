@@ -6,6 +6,7 @@ import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarProcessingException;
 import net.datafaker.Faker;
+import org.springframework.core.io.ClassPathResource;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,6 +24,7 @@ public class Constants {
     public static final Faculty FACULTY_3 = new Faculty();
     public static final Faculty FACULTY_4 = new Faculty();
     public static final Faculty FACULTY_4_EDITED = new Faculty();
+    public static final Faculty UNSAVED_FACULTY = new Faculty();
 
     /**
      * Директория, в которой сохраняется ресурс во время теста.
@@ -56,7 +58,11 @@ public class Constants {
      * Путь к исходному тестовому ресурсу
      */
     public static Path testResoursePath() {
-        return Path.of("src/test/resources/static/image.jpg");
+        try {
+            return new ClassPathResource("static/image.jpg").getFile().toPath();
+        } catch (IOException e) {
+            throw new RuntimeException("Cannot to read test-resource");
+        }
     }
 
     public static final Avatar AVATAR_1 = new Avatar();
@@ -85,12 +91,11 @@ public class Constants {
     }
 
     private static void facultiesConstantsInitialize() {
-        Stream.of(FACULTY_1, FACULTY_2, FACULTY_3, FACULTY_4)
+        Stream.of(FACULTY_1, FACULTY_2, FACULTY_3, FACULTY_4, UNSAVED_FACULTY)
                 .forEach(faculty -> {
                     faculty.setId(faker.random().nextLong(100, 200));
                     faculty.setName(faker.letterify("????????"));
                     faculty.setColor(Color.values()[faker.random().nextInt(Color.values().length)]);
-                    faculty.setStudents(new ArrayList<>());
                 });
 
         FACULTY_4_EDITED.setId(FACULTY_4.getId());

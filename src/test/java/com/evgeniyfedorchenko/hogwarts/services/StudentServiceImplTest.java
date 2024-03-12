@@ -52,7 +52,7 @@ class StudentServiceImplTest {
 
         when(facultyRepositoryMock.findById(FACULTY_1.getId())).thenReturn(Optional.of(FACULTY_1));
         when(studentRepositoryMock.save(incompleteStudent)).thenReturn(STUDENT_3);
-        when(facultyServiceMock.updateFaculty(eq(FACULTY_1.getId()), any(Faculty.class))).thenReturn(Optional.of(FACULTY_3));
+        when(facultyRepositoryMock.save(any(Faculty.class))).thenReturn(FACULTY_3);
 
         Student actual = out.createStudent(STUDENT_3);
         assertThat(actual)
@@ -176,7 +176,7 @@ class StudentServiceImplTest {
     @Test
     void findStudentsByExactAgeTest() {
         when(studentRepositoryMock.findByAge(STUDENT_1.getAge())).thenReturn(List.of(STUDENT_1));
-        List<Student> actual = out.findStudentsByAgeBetween(STUDENT_1.getAge(), -1);
+        List<Student> actual = out.findStudentsByAge(STUDENT_1.getAge(), -1);
         assertThat(actual).doesNotContainNull()
                 .containsOnly(STUDENT_1);
     }
@@ -186,7 +186,7 @@ class StudentServiceImplTest {
         when(studentRepositoryMock.findByAgeBetween(STUDENT_1.getAge(), STUDENT_3.getAge()))
                 .thenReturn(List.of(STUDENT_1, STUDENT_2, STUDENT_3));
 
-        List<Student> actual = out.findStudentsByAgeBetween(STUDENT_1.getAge(), STUDENT_3.getAge());
+        List<Student> actual = out.findStudentsByAge(STUDENT_1.getAge(), STUDENT_3.getAge());
         assertThat(actual).doesNotContainNull()
                 .containsOnly(STUDENT_1, STUDENT_2, STUDENT_3);
     }
@@ -195,14 +195,14 @@ class StudentServiceImplTest {
     void findFacultyPositiveTest() {
         STUDENT_1.setFaculty(FACULTY_1);
         when(studentRepositoryMock.findById(STUDENT_1.getId())).thenReturn(Optional.of(STUDENT_1));
-        Optional<Faculty> actual = out.findFaculty(STUDENT_1.getId());
+        Optional<Faculty> actual = out.getFaculty(STUDENT_1.getId());
         assertThat(actual.get()).isEqualTo(STUDENT_1.getFaculty());
     }
 
     @Test
     void findFacultyNegativeTest() {
         when(studentRepositoryMock.findById(STUDENT_1.getId())).thenReturn(Optional.empty());
-        Optional<Faculty> actual = out.findFaculty(STUDENT_1.getId());
+        Optional<Faculty> actual = out.getFaculty(STUDENT_1.getId());
         assertThatThrownBy(actual::get).isInstanceOf(NoSuchElementException.class);
     }
 

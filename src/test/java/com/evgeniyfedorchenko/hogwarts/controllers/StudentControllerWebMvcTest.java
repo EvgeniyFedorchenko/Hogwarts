@@ -13,6 +13,8 @@ import com.evgeniyfedorchenko.hogwarts.services.FacultyServiceImpl;
 import com.evgeniyfedorchenko.hogwarts.services.StudentServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.Annotated;
+import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,7 +53,6 @@ public class StudentControllerWebMvcTest {
 
     @Autowired
     private MockMvc mockMvc;
-    @Autowired
     private ObjectMapper objectMapper;
 
     @MockBean
@@ -75,22 +76,49 @@ public class StudentControllerWebMvcTest {
     @Captor
     private ArgumentCaptor<Student> studentCaptor;
 
+    private String getFormattedBody(Student student) {
+        return """
+                {
+                    "id": %d,
+                    "name": "%s",
+                    "age": %d,
+                    "faculty": {
+                        "id": %d
+                  }
+                }""".formatted(
+                student.getId(),
+                student.getName(),
+                student.getAge(),
+                student.getFaculty().getId());
+    }
+
+    private void customizeObjectMapper() {
+        objectMapper.setAnnotationIntrospector(new JacksonAnnotationIntrospector() {
+            @Override
+            protected boolean _isIgnorable(Annotated a) {
+                return super._isIgnorable(a) || a.getRawType() == Faculty.class;
+            }
+        });
+    }
 
     @BeforeEach
     public void beforeEach() {
+
         testConstantsInitialisation();
+        objectMapper = new ObjectMapper();
+
+        Random random = new Random();
         TEST_lIST_OF_4_STUDENTS
                 .forEach(student -> {
-                    Random random = new Random();
                     student.setFaculty(TEST_lIST_OF_4_FACULTY.get(random.nextInt(TEST_lIST_OF_4_FACULTY.size())));
                 });
         AVATAR_1.setStudent(STUDENT_1);
         AVATAR_1.setFilePath(AVATAR_1.getFilePath().formatted(AVATAR_1.getStudent()));
+        STUDENT_1.setAvatar(AVATAR_1);
     }
 
     @AfterEach
     public void afterEach() throws IOException {
-        // TODO: 08.03.2024 почему-то не работает
         if (Files.exists(testResourceDir)) {
             File[] listFiles = new File(testResourceDir.toUri()).listFiles();
             if (listFiles != null) {
@@ -107,29 +135,31 @@ public class StudentControllerWebMvcTest {
         when(facultyRepositoryMock.findById(targetStudent.getFaculty().getId())).thenReturn(Optional.of(targetStudent.getFaculty()));
         when(studentRepositoryMock.save(any(Student.class))).thenReturn(STUDENT_1);
         when(facultyServiceImplMock.updateFaculty(anyLong(), any(Faculty.class))).thenReturn(Optional.of(FACULTY_1));
+        when(facultyRepositoryMock.save(any(Faculty.class))).thenReturn(targetStudent.getFaculty());
+
 
         mockMvc.perform(post("/students")
-                        .content(objectMapper.writeValueAsString(targetStudent))
+                        .content(getFormattedBody(targetStudent))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
 
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value(targetStudent.getName()))
-                .andExpect(jsonPath("$.age").value(targetStudent.getAge()))
-                .andExpect(jsonPath("$.faculty.name").value(targetStudent.getFaculty().getName()))
-                .andExpect(jsonPath("$.faculty.color").value(targetStudent.getFaculty().getColor().toString()));
+                .andExpect(jsonPath("$.age").value(targetStudent.getAge()));
 
         verify(studentRepositoryMock).save(studentCaptor.capture());
-        Student captorValue = studentCaptor.getValue();
+        Student studentCaptorValue = studentCaptor.getValue();
 
-        assertThat(captorValue)
+        assertThat(studentCaptorValue)
                 .usingRecursiveComparison()
                 .ignoringFields("id", "avatar", "faculty.students")
                 .isEqualTo(targetStudent);
+        verify(facultyRepositoryMock).save(facultyCaptor.capture());
+        Faculty facultyCaptorValue = facultyCaptor.getValue();
 
 //        проверка, что факультет нового студента действительно содержит этого студента
-        assertThat(captorValue.getFaculty().getStudents())
-                .contains(captorValue);
+        assertThat(facultyCaptorValue.getStudents())
+                .contains(targetStudent);
     }
 
     @Test
@@ -166,7 +196,7 @@ public class StudentControllerWebMvcTest {
         when(facultyRepositoryMock.findById(FACULTY_1.getId())).thenReturn(Optional.empty());
 
         mockMvc.perform(post("/students")
-                        .content(objectMapper.writeValueAsString(STUDENT_1))
+                        .content(getFormattedBody(STUDENT_1))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
 
@@ -201,11 +231,7 @@ public class StudentControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(targetStudent.getId()))
                 .andExpect(jsonPath("$.name").value(targetStudent.getName()))
-                .andExpect(jsonPath("$.age").value(targetStudent.getAge()))
-
-                .andExpect(jsonPath("$.faculty.id").value(targetStudent.getFaculty().getId()))
-                .andExpect(jsonPath("$.faculty.name").value(targetStudent.getFaculty().getName()))
-                .andExpect(jsonPath("$.faculty.color").value(targetStudent.getFaculty().getColor().toString()));
+                .andExpect(jsonPath("$.age").value(targetStudent.getAge()));
     }
 
     @Test
@@ -237,6 +263,7 @@ public class StudentControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
+        customizeObjectMapper();
         List<Student> actual = objectMapper.readValue(response, new TypeReference<>() {
         });
         assertThat(actual).isEqualTo(expected);
@@ -259,6 +286,7 @@ public class StudentControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
+        customizeObjectMapper();
         List<Student> actual = objectMapper.readValue(response, new TypeReference<>() {
         });
         assertThat(actual).isEqualTo(expected);
@@ -318,15 +346,14 @@ public class StudentControllerWebMvcTest {
         when(studentRepositoryMock.save(any(Student.class))).thenReturn(destStudent);
 
         mockMvc.perform(put("/students/{id}", srcStudent.getId())
-                        .content(objectMapper.writeValueAsString(destStudent))
+                        .content(getFormattedBody(destStudent))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
 
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(destStudent.getId()))
                 .andExpect(jsonPath("$.name").value(destStudent.getName()))
-                .andExpect(jsonPath("$.age").value(destStudent.getAge()))
-                .andExpect(jsonPath("$.faculty").value(destStudent.getFaculty()));
+                .andExpect(jsonPath("$.age").value(destStudent.getAge()));
 
         verify(studentRepositoryMock).save(studentCaptor.capture());
         Student captorValue = studentCaptor.getValue();
@@ -358,26 +385,27 @@ public class StudentControllerWebMvcTest {
 
         when(studentRepositoryMock.findById(srcStudent.getId())).thenReturn(Optional.of(srcStudent));
         when(facultyRepositoryMock.findById(destStudent.getFaculty().getId())).thenReturn(Optional.of(destStudent.getFaculty()));
+        when(facultyRepositoryMock.save(any(Faculty.class)))
+                .thenReturn(srcStudent.getFaculty())
+                .thenReturn(destStudent.getFaculty());
         when(studentRepositoryMock.save(any(Student.class))).thenReturn(STUDENT_4_EDITED);
 
         // Зачислили студента во 2ой факультет
-        FACULTY_2.setStudents(List.of(STUDENT_2, STUDENT_3, STUDENT_4_EDITED));
+        FACULTY_2.setStudents(new ArrayList<>(List.of(STUDENT_2, STUDENT_3, STUDENT_4_EDITED)));
         when(facultyServiceImplMock.updateFaculty(anyLong(), any(Faculty.class)))
                 .thenReturn(Optional.of(FACULTY_1))
                 .thenReturn(Optional.of(FACULTY_2));
 
-
         mockMvc.perform(put("/students/{id}", srcStudent.getId())
-                        .content(objectMapper.writeValueAsString(destStudent))
+                        .content(getFormattedBody(destStudent))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
 
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value(destStudent.getName()))
-                .andExpect(jsonPath("$.age").value(destStudent.getAge()))
-                .andExpect(jsonPath("$.faculty").value(destStudent.getFaculty()));
+                .andExpect(jsonPath("$.age").value(destStudent.getAge()));
 
-        verify(facultyServiceImplMock, times(2)).updateFaculty(anyLong(), facultyCaptor.capture());
+        verify(facultyRepositoryMock, times(2)).save(facultyCaptor.capture());
         List<Faculty> capturedFaculties = facultyCaptor.getAllValues();
         assertThat(capturedFaculties.get(0).getStudents()).doesNotContain(srcStudent);
         assertThat(capturedFaculties.get(1).getStudents()).contains(destStudent);
@@ -426,7 +454,6 @@ public class StudentControllerWebMvcTest {
 
     @Test
     void updateStudentWithoutFacultyNegativeTest() throws Exception {
-//        Исправлено
         when(studentRepositoryMock.findById(STUDENT_4.getId())).thenReturn(Optional.of(STUDENT_4));
 
         mockMvc.perform(put("/students/{id}", STUDENT_4.getId())
@@ -447,7 +474,7 @@ public class StudentControllerWebMvcTest {
         when(facultyRepositoryMock.findById(STUDENT_4_EDITED.getFaculty().getId())).thenReturn(Optional.empty());
 
         mockMvc.perform(put("/students/{id}", STUDENT_4.getId())
-                        .content(objectMapper.writeValueAsString(STUDENT_4_EDITED))
+                        .content(getFormattedBody(STUDENT_4_EDITED))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
 
@@ -578,8 +605,7 @@ public class StudentControllerWebMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(STUDENT_1.getId()))
                 .andExpect(jsonPath("$.name").value(STUDENT_1.getName()))
-                .andExpect(jsonPath("$.age").value(STUDENT_1.getAge()))
-                .andExpect(jsonPath("$.faculty").value(STUDENT_1.getFaculty()));
+                .andExpect(jsonPath("$.age").value(STUDENT_1.getAge()));
 
         verify(studentRepositoryMock).delete(studentCaptor.capture());
         Student captureValue = studentCaptor.getValue();
@@ -601,3 +627,5 @@ public class StudentControllerWebMvcTest {
                 .andExpect(content().string(""));
     }
 }
+
+

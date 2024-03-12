@@ -44,14 +44,14 @@ public class StudentController {
     @Operation(summary = "Enter one value for an exact-match search and two values for a range search")
     public List<Student> getStudentByAge(@RequestParam int age,
                                          @RequestParam(required = false, defaultValue = "-1") int upTo) {
-        return studentService.findStudentsByAgeBetween(age, upTo);
+        return studentService.findStudentsByAge(age, upTo);
     }
 
 
     @GetMapping(path = "/{id}/faculty")
     @Operation(summary = "Get faculty of existing student")
     public ResponseEntity<Faculty> getFacultyOfStudent(@PathVariable Long id) {
-        return ResponseEntity.of(studentService.findFaculty(id));
+        return ResponseEntity.of(studentService.getFaculty(id));
     }
 
 
@@ -69,7 +69,7 @@ public class StudentController {
     }
 
 
-    /* В зависимости от флага large выбирает откуда получить картинку:
+    /* В зависимости от флага large выбираем откуда получить картинку:
      *  - на диске хранится полноценное изображение, получаем его если large = true
      *  - в БД хранится уменьшенная копия - превью, получаем её, если large = false
      *  (пока что везде хранится одинаковая картинка, но я позже реализую это) */
