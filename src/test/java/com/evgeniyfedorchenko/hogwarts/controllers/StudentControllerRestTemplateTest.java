@@ -9,10 +9,7 @@ import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -79,6 +76,8 @@ public class StudentControllerRestTemplateTest {
     private List<Student> savedStudents;
     @Autowired
     ObjectMapper objectMapper;
+    Random random = new Random();
+
 
     private String getFormattedBody(Student student) {
         return """
@@ -99,16 +98,15 @@ public class StudentControllerRestTemplateTest {
         savedFaculties = facultyRepository.saveAll(TEST_lIST_OF_4_FACULTY);
 
 //        Всем студентам присваиваем рандомный факультет (сохраненный в БД) и тоже сохраняем
-        Random rand = new Random();
         savedStudents = studentRepository.saveAll(TEST_lIST_OF_4_STUDENTS
                 .stream()
                 .peek(student -> {
-                    int randomFaculty = rand.nextInt(0, savedFaculties.size());
+                    int randomFaculty = random.nextInt(0, savedFaculties.size());
                     student.setFaculty(savedFaculties.get(randomFaculty));
                 })
                 .toList());
 
-        int randomNum = rand.nextInt(0, savedFaculties.size());
+        int randomNum = random.nextInt(0, savedFaculties.size());
         UNSAVED_STUDENT.setFaculty(savedFaculties.get(randomNum));
 
 //        Для метода PATCH localhost:port/students/{id}/avatar
@@ -410,7 +408,6 @@ public class StudentControllerRestTemplateTest {
         assertThat(oldFacultyOfStudent.get().getStudents()).contains(targetStudent);
     }
 
-
     @Test
     void updateStudentWithIllegalFieldsNegativeTest() {
         Student expected = savedStudents.get(0);
@@ -653,5 +650,50 @@ public class StudentControllerRestTemplateTest {
         }
 
         assertThat(sizeBefore == sizeAfter).isTrue();
+    }
+
+    @Test
+    void getNumberOfStudents() {
+        ResponseEntity<Long> responseEntity = testRestTemplate.getForEntity(
+                baseStudentUrl() + "/quantity",
+                Long.class
+        );
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).isEqualTo(studentRepository.count());
+    }
+
+    @Test
+    void getAverageAge() {
+        long actual = studentRepository.findAll().stream()
+                .mapToInt(Student::getAge)
+                .sum() / studentRepository.count();
+
+        ResponseEntity<Integer> responseEntity = testRestTemplate.getForEntity(
+                baseStudentUrl() + "/avg-age",
+                Integer.class
+        );
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).isEqualTo(actual);
+    }
+
+    @Test
+    void getLastStudents() {
+        int targetCount = random.nextInt(TEST_lIST_OF_4_STUDENTS.size() * 2);
+
+        List<Student> actual = studentRepository.findAll().stream()
+                .sorted(Comparator.comparing(Student::getId).reversed())
+                .limit(targetCount)
+                .toList();
+
+        ResponseEntity<List<Student>> responseEntity = testRestTemplate.exchange(
+                baseStudentUrl() + "/last/{quantity}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<>() {},
+                targetCount
+        );
+
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).isEqualTo(actual);
     }
 }
