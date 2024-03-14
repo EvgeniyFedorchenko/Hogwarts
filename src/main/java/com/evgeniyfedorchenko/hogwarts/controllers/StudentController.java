@@ -1,8 +1,10 @@
 package com.evgeniyfedorchenko.hogwarts.controllers;
 
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
+import com.evgeniyfedorchenko.hogwarts.entities.AvatarDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
+import com.evgeniyfedorchenko.hogwarts.services.AvatarService;
 import com.evgeniyfedorchenko.hogwarts.services.StudentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,9 +23,12 @@ import java.util.List;
 public class StudentController {
 
     private final StudentService studentService;
+    private final AvatarService avatarService;
 
-    public StudentController(StudentService studentService) {
+    public StudentController(StudentService studentService,
+                             AvatarService avatarService) {
         this.studentService = studentService;
+        this.avatarService = avatarService;
     }
 
     @PostMapping
@@ -54,6 +59,24 @@ public class StudentController {
         return ResponseEntity.of(studentService.getFaculty(id));
     }
 
+    @GetMapping(path = "/quantity")
+    @Operation(summary = "Get the number of all students")
+    public Long getNumberOfStudents() {
+        return studentService.getNumberOfStudents();
+    }
+
+    @GetMapping(path = "/avg-age")
+    @Operation(summary = "Get average age of all students")
+    public Integer getAverageAge() {
+        return studentService.getAverageAge();
+    }
+
+    @GetMapping(path = "/last/{quantity}")
+    @Operation(summary = "Get the last \"quantity\" students")
+    public List<Student> getLastStudents(@PathVariable int quantity) {
+        return studentService.findLastStudents(quantity);
+    }
+
 
     @PutMapping(path = "/{id}")
     @Operation(summary = "Update existing student")
@@ -77,7 +100,13 @@ public class StudentController {
     @Operation(summary = "Get avatar of student. Set \"large\" in \"true\" to get the best image resolution")
     public ResponseEntity<byte[]> getAvatar(@PathVariable Long id,
                                             @RequestParam(required = false, defaultValue = "false") boolean large) {
-        return transform(studentService.getAvatar(id, large));
+        return setHeaders(studentService.getAvatar(id, large));
+    }
+
+    @GetMapping(path = "/avatars")
+    @Operation(summary = "Get all avatars")
+    public List<AvatarDto> getAllAvatars(@RequestParam int pageNumber, @RequestParam int pageSize) {
+        return avatarService.getAllAvatars(pageNumber, pageSize);
     }
 
 
@@ -88,10 +117,30 @@ public class StudentController {
     }
 
 
-    private ResponseEntity<byte[]> transform(Avatar avatar) {
+    private ResponseEntity<byte[]> setHeaders(Avatar avatar) {
         return ResponseEntity.status(HttpStatus.OK)
                 .contentLength(avatar.getData().length)
                 .contentType(MediaType.parseMediaType(avatar.getMediaType()))
                 .body(avatar.getData());
     }
+
+    /*
+     *
+     * /students
+     *     POST /               |
+     *     GET /{id}            |
+     *     GET /                | age, upTo
+     *     GET /{id}/faculty    |
+     *     PATCH /{id}/avatar   |
+     *   * GET /quantity        |
+     *   * GET /avg-age         | quantity
+     *   * GET /last/{quantity} |
+     *     PUT /{id}            |
+     *     GET /{id}/avatar     | large
+     *     DELETE /{id}         |
+     *   * GET /avatars         | pageNumber, pageSize
+     *
+     *   * - new
+     *
+     * */
 }

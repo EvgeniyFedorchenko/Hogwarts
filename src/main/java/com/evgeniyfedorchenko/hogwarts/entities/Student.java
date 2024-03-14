@@ -89,6 +89,6 @@ public class Student {
 
     @Override
     public String toString() {
-        return "Student %d - %s, %dy.o. (%s)".formatted(id, name, age, faculty.getName());
+        return "StudentID%d-%s,%dy.o.(%s)".formatted(id, name, age, faculty.getName());
     }
 }

@@ -20,6 +20,12 @@ public interface StudentService {
 
     List<Student> findStudentsByAge(int age, int upTo);
 
+    Long getNumberOfStudents();
+
+    Integer getAverageAge();
+
+    List<Student> findLastStudents(int quantity);
+
     Optional<Faculty> getFaculty(Long studentId);
 
     boolean setAvatar(Long id, MultipartFile avatarFile);

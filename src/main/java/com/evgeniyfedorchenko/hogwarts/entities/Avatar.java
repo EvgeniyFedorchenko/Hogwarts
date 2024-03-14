@@ -14,12 +14,12 @@ public class Avatar {
     private Long id;
     private String filePath;   // TODO: 06.03.2024 Мб сделать поле типа Path ?
     private String mediaType;   // TODO: 06.03.2024 Мб сделать поле типа MediaType ?
-
+    
+    @JsonIgnore
     @Lob
     @Column(columnDefinition = "oid")
     private byte[] data;
 
-    @JsonIgnore
     @OneToOne(mappedBy = "avatar")
     private Student student;
 

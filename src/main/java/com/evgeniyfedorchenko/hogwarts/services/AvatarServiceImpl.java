@@ -1,12 +1,14 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
+import com.evgeniyfedorchenko.hogwarts.entities.AvatarDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarProcessingException;
 import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.AvatarNotFoundException;
 import com.evgeniyfedorchenko.hogwarts.repositories.AvatarRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.springframework.util.StringUtils.getFilenameExtension;
 
@@ -62,7 +65,7 @@ public class AvatarServiceImpl implements AvatarService {
     private Avatar fillAvatar(Student student, MultipartFile avatarFile) throws IOException {
 
         Avatar avatar = avatarRepository.findByStudent_Id(student.getId()).orElseGet(Avatar::new);
-        avatar.setFilePath(avatarsDir + "\\" + student + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
+        avatar.setFilePath(avatarsDir + "/" + student + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
         avatar.setMediaType(avatarFile.getContentType());
         avatar.setData(avatarFile.getBytes());
         avatar.setStudent(student);
@@ -76,7 +79,7 @@ public class AvatarServiceImpl implements AvatarService {
             if (!Files.exists(avatarsDir) || !Files.isDirectory(avatarsDir)) {
                 Files.createDirectories(avatarsDir);
             }
-            Path path = Path.of(avatarsDir + "\\" + student.toString() + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
+            Path path = Path.of(avatarsDir + "/" + student.toString() + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
 
 //            Здесь будет сжатие изображения
 
@@ -95,6 +98,22 @@ public class AvatarServiceImpl implements AvatarService {
         afr.setData(Files.readAllBytes(Path.of(avatar.getFilePath())));
         afr.setMediaType(avatar.getMediaType());
         return afr;
+    }
+
+    @Override
+    public List<AvatarDto> getAllAvatars(int pageNumber, int pageSize) {
+        PageRequest pageRequest = PageRequest.of(pageNumber, pageSize);
+        List<Avatar> avatars = avatarRepository.findAll(pageRequest).getContent();
+        return avatars.stream()
+                .map(avatar -> new AvatarDto(
+                        avatar.getId(),
+                        avatar.getFilePath(),
+                        avatar.getMediaType(),
+                        "http://localhost:8080/students/%d/avatar".formatted(avatar.getStudent().getId()),
+                        avatar.getStudent().getId(),
+                        avatar.getStudent().getName())
+                ).toList();
+
     }
 }
 

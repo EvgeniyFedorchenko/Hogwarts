@@ -84,6 +84,21 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
+    public List<Student> findLastStudents(int quantity) {
+        return studentRepository.findLastStudents(quantity);
+    }
+
+    @Override
+    public Integer getAverageAge() {
+        return studentRepository.getAverageAge();
+    }
+
+    @Override
+    public Long getNumberOfStudents() {
+        return studentRepository.count();
+    }
+
+    @Override
     public Optional<Student> deleteStudent(Long id) {
 
         Optional<Student> studentOpt = studentRepository.findById(id);
