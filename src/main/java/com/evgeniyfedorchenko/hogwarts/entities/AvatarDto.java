@@ -1,5 +1,7 @@
 package com.evgeniyfedorchenko.hogwarts.entities;
 
+import org.springframework.beans.factory.annotation.Value;
+
 public class AvatarDto {
 
     private Long id;
@@ -9,6 +11,9 @@ public class AvatarDto {
     private Long studentId;
     private String studentName;
 
+    @Value("${server.port}")
+    private String port;
+
     public AvatarDto(Long id, String filePath, String mediaType,
                      String data, Long studentId, String studentName) {
         this.id = id;
@@ -17,6 +22,15 @@ public class AvatarDto {
         this.data = data;
         this.studentId = studentId;
         this.studentName = studentName;
+    }
+
+    public AvatarDto(Avatar avatar) {
+        this.id = avatar.getId();
+        this.filePath = avatar.getFilePath();
+        this.mediaType = avatar.getMediaType();
+        this.data = "http://localhost:%s/students/%d/avatar".formatted(port, avatar.getStudent().getId());
+        this.studentId = avatar.getStudent().getId();
+        this.studentName = avatar.getStudent().getName();
     }
 
     public Long getId() {

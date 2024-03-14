@@ -1,6 +1,7 @@
 package com.evgeniyfedorchenko.hogwarts.controllers;
 
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
+import com.evgeniyfedorchenko.hogwarts.entities.AvatarDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.repositories.AvatarRepository;
@@ -9,7 +10,10 @@ import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -19,6 +23,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.*;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -665,8 +670,8 @@ public class StudentControllerRestTemplateTest {
     @Test
     void getAverageAge() {
         long actual = studentRepository.findAll().stream()
-                .mapToInt(Student::getAge)
-                .sum() / studentRepository.count();
+                              .mapToInt(Student::getAge)
+                              .sum() / studentRepository.count();
 
         ResponseEntity<Integer> responseEntity = testRestTemplate.getForEntity(
                 baseStudentUrl() + "/avg-age",
@@ -689,9 +694,35 @@ public class StudentControllerRestTemplateTest {
                 baseStudentUrl() + "/last/{quantity}",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
-                new ParameterizedTypeReference<>() {},
+                new ParameterizedTypeReference<>() {
+                },
                 targetCount
         );
+
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).isEqualTo(actual);
+    }
+
+    @Test
+    void getAllAvatars() {
+        int pageNumber = random.nextInt(1, 3);
+        int pageSize = random.nextInt(1, 6);
+
+        ResponseEntity<List<AvatarDto>> responseEntity = testRestTemplate.exchange(
+                baseStudentUrl() + "/avatars?pageNumber={pageNumber}&pageSize={pageSize}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<>() {
+                },
+                pageNumber, pageSize
+        );
+
+        List<AvatarDto> actual = avatarRepository
+                .findAll(PageRequest.of(pageNumber, pageSize))
+                .getContent()
+                .stream()
+                .map(AvatarDto::new)
+                .toList();
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody()).isEqualTo(actual);

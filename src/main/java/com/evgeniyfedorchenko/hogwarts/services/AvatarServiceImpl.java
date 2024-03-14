@@ -68,7 +68,7 @@ public class AvatarServiceImpl implements AvatarService {
     private Avatar fillAvatar(Student student, MultipartFile avatarFile) throws IOException {
 
         Avatar avatar = avatarRepository.findByStudent_Id(student.getId()).orElseGet(Avatar::new);
-        avatar.setFilePath(avatarsDir + "/" + student + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
+        avatar.setFilePath(avatarsDir + "\\" + student + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
         avatar.setMediaType(avatarFile.getContentType());
         avatar.setData(avatarFile.getBytes());
         avatar.setStudent(student);
@@ -82,7 +82,7 @@ public class AvatarServiceImpl implements AvatarService {
             if (!Files.exists(avatarsDir) || !Files.isDirectory(avatarsDir)) {
                 Files.createDirectories(avatarsDir);
             }
-            Path path = Path.of(avatarsDir + "/" + student.toString() + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
+            Path path = Path.of(avatarsDir + "\\" + student.toString() + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
 
 //            Здесь будет сжатие изображения
 
@@ -116,6 +116,13 @@ public class AvatarServiceImpl implements AvatarService {
                         avatar.getStudent().getId(),
                         avatar.getStudent().getName())
                 ).toList();
+
+        /* Или может быть в конструктор AvatarDto передавать весь объект Avatar делать так:
+
+           return avatars.stream()
+                .map(Avatar::new)
+                .toList();
+        */
     }
 }
 
