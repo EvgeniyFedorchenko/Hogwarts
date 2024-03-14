@@ -5,11 +5,12 @@ public class AvatarDto {
     private Long id;
     private String filePath;
     private String mediaType;
-    private String data;
+    private String data;   // Здесь храним URL
     private Long studentId;
     private String studentName;
 
-    public AvatarDto(Long id, String filePath, String mediaType, String data, Long studentId, String studentName) {
+    public AvatarDto(Long id, String filePath, String mediaType,
+                     String data, Long studentId, String studentName) {
         this.id = id;
         this.filePath = filePath;
         this.mediaType = mediaType;

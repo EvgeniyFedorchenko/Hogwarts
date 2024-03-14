@@ -20,6 +20,7 @@ public class Avatar {
     @Column(columnDefinition = "oid")
     private byte[] data;
 
+    @JsonIgnore
     @OneToOne(mappedBy = "avatar")
     private Student student;
 

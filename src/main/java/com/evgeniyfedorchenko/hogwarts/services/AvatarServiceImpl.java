@@ -29,6 +29,9 @@ public class AvatarServiceImpl implements AvatarService {
     @Value("${path.to.avatars.folder}")
     private Path avatarsDir;
 
+    @Value("${server.port}")
+    private String port;
+
     public AvatarServiceImpl(AvatarRepository avatarRepository,
                              StudentRepository studentRepository) {
         this.avatarRepository = avatarRepository;
@@ -109,11 +112,10 @@ public class AvatarServiceImpl implements AvatarService {
                         avatar.getId(),
                         avatar.getFilePath(),
                         avatar.getMediaType(),
-                        "http://localhost:8080/students/%d/avatar".formatted(avatar.getStudent().getId()),
+                        "http://localhost:%s/students/%d/avatar".formatted(port, avatar.getStudent().getId()),
                         avatar.getStudent().getId(),
                         avatar.getStudent().getName())
                 ).toList();
-
     }
 }
 
