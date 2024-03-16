@@ -1,15 +1,18 @@
+-- Получаем ВСЕХ студентов (имя, возраст) с факультетами (название)
 SELECT
-    students.name AS students_name,
-	students.age AS students_age,
-	faculties.name AS faculties_name
+    students.name AS student_name,
+	students.age AS student_age,
+	faculties.name AS faculty_name
 FROM
     students
-INNER JOIN
+LEFT JOIN
     faculties ON students.faculty_id = faculties.id;
 
+
+-- Получаем студентов (имя, возраст), у которых есть аватары и сами аватары
 SELECT
-    students.name AS students_name,
-	students.age AS students_age,
+    students.name AS student_name,
+	students.age AS student_age,
 	avatars
 FROM
     students
