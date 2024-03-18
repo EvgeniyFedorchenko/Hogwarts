@@ -16,8 +16,15 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findByFaculty_Id(Long id);
 
     @Query(value = "SELECT AVG(age) FROM students", nativeQuery = true)
-    int getAverageAge();
+    Double getAverageAge();
 
-    @Query(value = "SELECT * FROM students ORDER BY id DESC LIMIT :q", nativeQuery = true)
-    List<Student> findLastStudents(@Param("q") int quantity);
+    @Query(value = "SELECT * FROM students ORDER BY :sortColumn ASC LIMIT :limit OFFSET :offset", nativeQuery = true)
+    List<Student> findLastStudentsAscSort(@Param("sortColumn") String sortParam,
+                                          @Param("limit") int limit,
+                                          @Param("offset") int offset);
+
+    @Query(value = "SELECT * FROM students ORDER BY :sortColumn DESC LIMIT :limit OFFSET :offset", nativeQuery = true)
+    List<Student> findLastStudentsDescSort(@Param("sortColumn") String sortParam,
+                                           @Param("limit") int limit,
+                                           @Param("offset") int offset);
 }
