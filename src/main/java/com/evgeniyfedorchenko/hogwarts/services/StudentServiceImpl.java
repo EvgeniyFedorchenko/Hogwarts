@@ -1,15 +1,18 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
+import com.evgeniyfedorchenko.hogwarts.controllers.SortOrder;
+import com.evgeniyfedorchenko.hogwarts.dto.StudentInputDto;
+import com.evgeniyfedorchenko.hogwarts.dto.StudentOutputDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarProcessingException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.FacultyNotFoundException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.IllegalStudentFieldsException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.StudentNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.EntityNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.mappers.StudentMapper;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -21,62 +24,67 @@ public class StudentServiceImpl implements StudentService {
     private final StudentRepository studentRepository;
     private final FacultyRepository facultyRepository;
     private final AvatarService avatarService;
+    private final StudentMapper studentMapper;
 
     public StudentServiceImpl(StudentRepository studentRepository,
                               FacultyRepository facultyRepository,
-                              AvatarService avatarService) {
+                              AvatarService avatarService,
+                              StudentMapper studentMapper) {
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
         this.avatarService = avatarService;
+        this.studentMapper = studentMapper;
     }
 
     @Override
-    public Student createStudent(Student student) {
-        validateStudentsFields(student);
-        validateFacultyFields(student.getFaculty());
+    @Transactional
+    public StudentOutputDto createStudent(StudentInputDto inputDto) {
+        Student student = fillStudent(inputDto, new Student());
+        Student savedStudent = studentRepository.save(student);
 
-        Faculty findedFaculty = findFaculty(student.getFaculty().getId());
-        Student savedStudent = studentRepository.save(fillStudent(student, new Student()));
-
+        Faculty findedFaculty = findFaculty(inputDto.getFacultyId());
         findedFaculty.addStudent(savedStudent);
         facultyRepository.save(findedFaculty);
 
-        return savedStudent;
+        return studentMapper.toDto(savedStudent);
     }
 
     @Override
-    public Optional<Student> findStudent(Long id) {
-        return studentRepository.findById(id);
+    public Optional<StudentOutputDto> findStudent(Long id) {
+        return studentRepository.findById(id)
+                .map(studentMapper::toDto);
     }
 
     @Override
-    public Optional<Student> updateStudent(Long id, Student student) {
+    @Transactional
+    public Optional<StudentOutputDto> updateStudent(Long id, StudentInputDto inputDto) {
         if (id <= 0L) {
             return Optional.empty();
         }
 
-        validateStudentsFields(student);
         Optional<Student> studentById = studentRepository.findById(id);
         if (studentById.isEmpty()) {
             return Optional.empty();
         }
-        validateFacultyFields(student.getFaculty());
-        return Optional.of(studentRepository.save(fillStudent(student, studentById.get())));
+        Student student = fillStudent(inputDto, studentById.get());
+        studentRepository.save(student);
+
+        return Optional.of(studentMapper.toDto(student));
     }
 
-    private Student fillStudent(Student src, Student dest) {
+    private Student fillStudent(StudentInputDto src, Student dest) {
 
-        Faculty findedFaculty = findFaculty(src.getFaculty().getId());
+        Faculty findedFaculty = findFaculty(src.getFacultyId());
 
         dest.setName(src.getName());
         dest.setAge(src.getAge());
-        dest.setAvatar(src.getAvatar());
+//        Аватар, если он есть, остается на месте
 
-//        Если меняется факультет - обновляем списки студентов у нового и старого факультета
-//        dest.getFaculty() может быть null, если мы пришли сюда из метода create()
+//          dest.getFaculty() может быть null, если мы пришли сюда из метода create()
         if (dest.getFaculty() != null && !dest.getFaculty().equals(findedFaculty)) {
             facultyRepository.save(dest.getFaculty().removeStudent(dest));
             facultyRepository.save(findedFaculty.addStudent(dest));
+
         } else {
             dest.setFaculty(findedFaculty);
         }
@@ -84,20 +92,56 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public Optional<Student> deleteStudent(Long id) {
+    @Transactional
+    public List<StudentOutputDto> searchStudents(String sortParam, SortOrder sortOrder, int pageNumber, int pageSize) {
+        int offset = (pageNumber - 1) * pageSize;
+        List<Student> students = sortOrder == SortOrder.ASC
+                ? studentRepository.findLastStudentsAscSort(sortParam, pageSize, offset)
+                : studentRepository.findLastStudentsDescSort(sortParam, pageSize, offset);
 
-        Optional<Student> studentOpt = studentRepository.findById(id);
-        if (studentOpt.isPresent()) {
-            studentRepository.delete(studentOpt.get());
-            return studentOpt;
-        } else {
-            return Optional.empty();
-        }
+        return students.stream()
+                .map(studentMapper::toDto)
+                .toList();
     }
 
     @Override
-    public List<Student> findStudentsByAge(int age, int upTo) {
-        return upTo == -1L ? studentRepository.findByAge(age) : studentRepository.findByAgeBetween(age, upTo);
+    public Double getAverageAge() {
+        return studentRepository.getAverageAge();
+    }
+
+    @Override
+    public Long getNumberOfStudents() {
+        return studentRepository.count();
+    }
+
+    @Override
+    @Transactional
+    public Optional<Student> deleteStudent(Long id) {
+
+        Optional<Student> studentOpt = studentRepository.findById(id);
+        if (studentOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Student student = studentOpt.get();
+        if (student.getAvatar() != null) {
+            avatarService.deleteAvatar((student));
+        }
+        facultyRepository.findById(student.getFaculty().getId())
+                .ifPresent(faculty -> facultyRepository.save(faculty.removeStudent(student)));
+
+        studentRepository.deleteById(student.getId());
+        return studentOpt;
+    }
+
+
+    @Override
+    public List<StudentOutputDto> findStudentsByAge(int age, int upTo) {
+        List<Student> students = upTo == -1L
+                ? studentRepository.findByAge(age)
+                : studentRepository.findByAgeBetween(age, upTo);
+
+        return students.stream().map(studentMapper::toDto).toList();
     }
 
     @Override
@@ -109,18 +153,20 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public boolean setAvatar(Long studentId, MultipartFile avatarFile) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() ->
-                        new StudentNotFoundException("Student with ID " + studentId + "not found", "id", String.valueOf(studentId)));
+                .orElseThrow(() -> new EntityNotFoundException("Student with ID " + studentId + " not found"));
 
         return avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
     }
 
     @Override
-    public Avatar getAvatar(Long studentId, boolean large) {
-        Long avatarId = studentRepository.findById(studentId).orElseThrow(() ->
-                        new StudentNotFoundException("Student with ID " + studentId + "not found", "id", String.valueOf(studentId)))
-                .getAvatar()
-                .getId();
+    public Optional<Avatar> getAvatar(Long studentId, boolean large) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new EntityNotFoundException("Student with ID " + studentId + " not found"));
+
+        if (student.getAvatar() == null) {
+            return Optional.empty();
+        }
+        Long avatarId = student.getAvatar().getId();
 
         try {
             return large ? avatarService.getFromLocal(avatarId) : avatarService.findAvatar(avatarId);
@@ -129,28 +175,8 @@ public class StudentServiceImpl implements StudentService {
         }
     }
 
-    private void validateStudentsFields(Student student) {
-        if (student.getName() == null) {
-            throw new IllegalStudentFieldsException(
-                    "Student name cannot be null or empty", "name", student.getName());
-        } else if (student.getAge() <= 0) {
-            throw new IllegalStudentFieldsException(
-                    "Student age cannot be equal zero", "age", String.valueOf(student.getAge()));
-        }
-    }
-
-    private void validateFacultyFields(Faculty faculty) {
-        if (faculty == null || faculty.getId() == null) {
-            throw new IllegalStudentFieldsException("Faculty or its ID must not be null", "faculty", "empty");
-        }
-    }
-
-    private Faculty findFaculty(Long facultyId) {
-        return facultyRepository.findById(facultyId).orElseThrow(() ->
-                new FacultyNotFoundException(
-                        "Faculty with ID " + facultyId + "not found",
-                        "id",
-                        String.valueOf(facultyId)
-                ));
+    private Faculty findFaculty(Long id) {
+        return facultyRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Faculty with ID " + id + " not found"));
     }
 }

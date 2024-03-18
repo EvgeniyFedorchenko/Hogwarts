@@ -1,6 +1,7 @@
 package com.evgeniyfedorchenko.hogwarts.controllers;
 
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
+import com.evgeniyfedorchenko.hogwarts.entities.AvatarDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.repositories.AvatarRepository;
@@ -22,6 +23,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.*;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -79,6 +81,8 @@ public class StudentControllerRestTemplateTest {
     private List<Student> savedStudents;
     @Autowired
     ObjectMapper objectMapper;
+    Random random = new Random();
+
 
     private String getFormattedBody(Student student) {
         return """
@@ -99,16 +103,15 @@ public class StudentControllerRestTemplateTest {
         savedFaculties = facultyRepository.saveAll(TEST_lIST_OF_4_FACULTY);
 
 //        Всем студентам присваиваем рандомный факультет (сохраненный в БД) и тоже сохраняем
-        Random rand = new Random();
         savedStudents = studentRepository.saveAll(TEST_lIST_OF_4_STUDENTS
                 .stream()
                 .peek(student -> {
-                    int randomFaculty = rand.nextInt(0, savedFaculties.size());
+                    int randomFaculty = random.nextInt(0, savedFaculties.size());
                     student.setFaculty(savedFaculties.get(randomFaculty));
                 })
                 .toList());
 
-        int randomNum = rand.nextInt(0, savedFaculties.size());
+        int randomNum = random.nextInt(0, savedFaculties.size());
         UNSAVED_STUDENT.setFaculty(savedFaculties.get(randomNum));
 
 //        Для метода PATCH localhost:port/students/{id}/avatar
@@ -410,7 +413,6 @@ public class StudentControllerRestTemplateTest {
         assertThat(oldFacultyOfStudent.get().getStudents()).contains(targetStudent);
     }
 
-
     @Test
     void updateStudentWithIllegalFieldsNegativeTest() {
         Student expected = savedStudents.get(0);
@@ -653,5 +655,76 @@ public class StudentControllerRestTemplateTest {
         }
 
         assertThat(sizeBefore == sizeAfter).isTrue();
+    }
+
+    @Test
+    void getNumberOfStudents() {
+        ResponseEntity<Long> responseEntity = testRestTemplate.getForEntity(
+                baseStudentUrl() + "/quantity",
+                Long.class
+        );
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).isEqualTo(studentRepository.count());
+    }
+
+    @Test
+    void getAverageAge() {
+        long actual = studentRepository.findAll().stream()
+                              .mapToInt(Student::getAge)
+                              .sum() / studentRepository.count();
+
+        ResponseEntity<Integer> responseEntity = testRestTemplate.getForEntity(
+                baseStudentUrl() + "/avg-age",
+                Integer.class
+        );
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).isEqualTo(actual);
+    }
+
+    @Test
+    void getLastStudents() {
+        int targetCount = random.nextInt(TEST_lIST_OF_4_STUDENTS.size() * 2);
+
+        List<Student> actual = studentRepository.findAll().stream()
+                .sorted(Comparator.comparing(Student::getId).reversed())
+                .limit(targetCount)
+                .toList();
+
+        ResponseEntity<List<Student>> responseEntity = testRestTemplate.exchange(
+                baseStudentUrl() + "/last/{quantity}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<>() {
+                },
+                targetCount
+        );
+
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).isEqualTo(actual);
+    }
+
+    @Test
+    void getAllAvatars() {
+        int pageNumber = random.nextInt(1, 3);
+        int pageSize = random.nextInt(1, 6);
+
+        ResponseEntity<List<AvatarDto>> responseEntity = testRestTemplate.exchange(
+                baseStudentUrl() + "/avatars?pageNumber={pageNumber}&pageSize={pageSize}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<>() {
+                },
+                pageNumber, pageSize
+        );
+
+        List<AvatarDto> actual = avatarRepository
+                .findAll(PageRequest.of(pageNumber, pageSize))
+                .getContent()
+                .stream()
+                .map(AvatarDto::new)
+                .toList();
+
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).isEqualTo(actual);
     }
 }

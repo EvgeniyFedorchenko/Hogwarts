@@ -1,6 +1,5 @@
 package com.evgeniyfedorchenko.hogwarts.entities;
 
-import com.fasterxml.jackson.annotation.*;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 
@@ -10,7 +9,6 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "faculties")
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")   // Заменяем повторные ссылки на id этих объектов (во избежание рекурсии)
 public class Faculty {
 
     @Id
