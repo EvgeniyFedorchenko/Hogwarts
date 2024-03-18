@@ -1,6 +1,5 @@
 package com.evgeniyfedorchenko.hogwarts.entities;
 
-import com.fasterxml.jackson.annotation.*;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 

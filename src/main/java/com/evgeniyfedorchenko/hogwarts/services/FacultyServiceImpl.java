@@ -38,10 +38,9 @@ public class FacultyServiceImpl implements FacultyService {
     public Faculty createFaculty(Faculty faculty) {
         validateFaculty(faculty);
 
-        if (facultyRepository.existsByName(faculty.getName())) {
-            throw new FacultyAlreadyExistsException("Such a faculty already exists");
-        }
-        return facultyRepository.save(fillFaculty(faculty, new Faculty()));
+        Faculty faculty = fillFaculty(inputDto, new Faculty());
+        Faculty savedFaculty = facultyRepository.save(faculty);
+        return facultyMapper.toDto(savedFaculty);
     }
 
     @Override
@@ -57,15 +56,9 @@ public class FacultyServiceImpl implements FacultyService {
         if (id <= 0L || byId.isEmpty()) {
             return Optional.empty();
         }
-
-        Optional<Faculty> firstByName = facultyRepository.findFirstByName(faculty.getName());
-        if (firstByName.isPresent() && !id.equals(firstByName.get().getId())) {
-            throw new FacultyAlreadyExistsException("This name already exists");
-
-        } else {
-            Faculty oldFaculty = fillFaculty(faculty, byId.get());
-            return Optional.of(facultyRepository.save(oldFaculty));
-        }
+        Faculty oldFaculty = fillFaculty(facultyInputDto, byId.get());
+        facultyRepository.save(oldFaculty);
+        return Optional.of(facultyMapper.toDto(oldFaculty));
     }
 
     private Faculty fillFaculty(FacultyInputDto src, Faculty dest) {
@@ -103,17 +96,9 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     @Override
-    public List<Student> findStudents(Long id) {
-        return studentRepository.findByFaculty_Id(id);
-    }
-
-    private void validateFaculty(Faculty faculty) {
-        if (faculty.getName() == null) {
-            throw new IllegalFacultyFieldsException(
-                    "Faculty name cannot be null", "name", faculty.getName());
-        } else if (faculty.getColor() == null) {
-            throw new IllegalFacultyFieldsException(
-                    "Faculty color cannot be null", "color", String.valueOf(faculty.getColor()));
-        }
+    public List<StudentOutputDto> findStudents(Long id) {
+        return studentRepository.findByFaculty_Id(id).stream()
+                .map(studentMapper::toDto)
+                .toList();
     }
 }

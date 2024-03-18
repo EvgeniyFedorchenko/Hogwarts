@@ -1,13 +1,17 @@
 package com.evgeniyfedorchenko.hogwarts.controllers;
 
+import com.evgeniyfedorchenko.hogwarts.dto.AvatarDto;
+import com.evgeniyfedorchenko.hogwarts.dto.StudentInputDto;
+import com.evgeniyfedorchenko.hogwarts.dto.StudentOutputDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
-import com.evgeniyfedorchenko.hogwarts.entities.AvatarDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.services.AvatarService;
 import com.evgeniyfedorchenko.hogwarts.services.StudentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -15,12 +19,15 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Optional;
 
 
 @Tag(name = "Students")
 @RestController
-@RequestMapping(path = "/students")
+@RequestMapping(StudentController.BASE_STUDENTS_URI)
 public class StudentController {
+
+    public static final String BASE_STUDENTS_URI = "/students";
 
     private final StudentService studentService;
     private final AvatarService avatarService;
@@ -33,30 +40,27 @@ public class StudentController {
 
     @PostMapping
     @Operation(summary = "Creating a student")
-    public Student createStudent(@RequestBody Student student) {
-        return studentService.createStudent(student);
+    public StudentOutputDto createStudent(@RequestBody @Valid StudentInputDto inputDto) {
+        return studentService.createStudent(inputDto);
     }
-
 
     @GetMapping(path = "/{id}")
     @Operation(summary = "Get existing student")
-    public ResponseEntity<Student> getStudent(@PathVariable Long id) {
+    public ResponseEntity<StudentOutputDto> getStudent(@PathVariable @Min(value = 1, message = "Id must be greater than 0") Long id) {
         return ResponseEntity.of(studentService.findStudent(id));
     }
 
-
     @GetMapping()
-    @Operation(summary = "Enter one value for an exact-match search and two values for a range search")
-    public List<Student> getStudentByAge(@RequestParam int age,
-                                         @RequestParam(required = false, defaultValue = "-1") int upTo) {
-        return studentService.findStudentsByAge(age, upTo);
-    }
+    @Operation(summary = "Student's search API")
+    public List<StudentOutputDto> searchStudents(@RequestParam(required = false, defaultValue = "id") String sortParam,
+                                                 @RequestParam(required = false, defaultValue = "ASC") SortOrder sortOrder,
 
+                                                 @RequestParam(required = false, defaultValue = "1")
+                                                 @Min(value = 1, message = "Number of page must be greater than 0") int pageNumber,
 
-    @GetMapping(path = "/{id}/faculty")
-    @Operation(summary = "Get faculty of existing student")
-    public ResponseEntity<Faculty> getFacultyOfStudent(@PathVariable Long id) {
-        return ResponseEntity.of(studentService.getFaculty(id));
+                                                 @RequestParam(required = false, defaultValue = "2147483648")
+                                                 @Min(value = 1, message = "Size of page must be greater than 0") int pageSize) {
+        return studentService.searchStudents(sortParam, sortOrder, pageNumber, pageSize);
     }
 
     @GetMapping(path = "/quantity")
@@ -67,52 +71,62 @@ public class StudentController {
 
     @GetMapping(path = "/avg-age")
     @Operation(summary = "Get average age of all students")
-    public Integer getAverageAge() {
+    public Double getAverageAge() {
         return studentService.getAverageAge();
     }
 
-    @GetMapping(path = "/last/{quantity}")
-    @Operation(summary = "Get the last \"quantity\" students")
-    public List<Student> getLastStudents(@PathVariable int quantity) {
-        return studentService.findLastStudents(quantity);
+    @GetMapping(path = "/byAge")
+    @Operation(summary = "Enter one value for an exact-match search and two values for a range search")
+    public List<StudentOutputDto> getStudentByAge(@RequestParam
+                                                  @Min(value = 16, message = "Age must be greater than 15") int age,
+                                                  @RequestParam(required = false, defaultValue = "-1")
+                                                  @Min(value = 16, message = "Age must be greater than 15") int upTo) {
+        return studentService.findStudentsByAge(age, upTo);
     }
-
 
     @PutMapping(path = "/{id}")
     @Operation(summary = "Update existing student")
-    public ResponseEntity<Student> updateStudent(@PathVariable Long id, @RequestBody Student student) {
-        return ResponseEntity.of(studentService.updateStudent(id, student));
+    public ResponseEntity<StudentOutputDto> updateStudent(@PathVariable
+                                                          @Min(value = 1, message = "Id must be greater than 0") Long id,
+                                                          @RequestBody @Valid StudentInputDto inputDto) {
+        return ResponseEntity.of(studentService.updateStudent(id, inputDto));
     }
 
+    @GetMapping(path = "/{id}/faculty")
+    @Operation(summary = "Get faculty of existing student")
+    public ResponseEntity<Faculty> getFacultyOfStudent(@PathVariable
+                                                       @Min(value = 1, message = "Id must be greater than 0") Long id) {
+        return ResponseEntity.of(studentService.getFaculty(id));
+    }
+
+    /* В зависимости от флага boolean large выбираем откуда получить картинку:
+       FALSE: получаем сжатое изображение (из БД). TRUE: получаем полное изображение (с диска) */
+    @GetMapping(path = "/{id}/avatar")
+    @Operation(summary = "Get avatar of student. Set \"large\" in \"true\" to get the best image resolution")
+    public ResponseEntity<byte[]> getAvatar(@PathVariable @Min(value = 1, message = "Id must be greater than 0") Long id,
+                                            @RequestParam(required = false, defaultValue = "false") boolean large) {
+        return studentService.getAvatar(id, large)
+                .map(this::setHeaders)
+                .orElseGet(() -> ResponseEntity.of(Optional.empty()));
+    }
 
     @PatchMapping(path = "/{id}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Add avatar to student")
-    public boolean setAvatar(@PathVariable Long id, @RequestPart MultipartFile avatar) {
+    public boolean setAvatar(@PathVariable @Min(value = 1, message = "Id must be greater than 0") Long id,
+                             @RequestPart MultipartFile avatar) {
         return studentService.setAvatar(id, avatar);
-    }
-
-
-    /* В зависимости от флага large выбираем откуда получить картинку:
-     *  - на диске хранится полноценное изображение, получаем его если large = true
-     *  - в БД хранится уменьшенная копия - превью, получаем её, если large = false
-     *  (пока что везде хранится одинаковая картинка, но я позже реализую это) */
-    @GetMapping(path = "/{id}/avatar")
-    @Operation(summary = "Get avatar of student. Set \"large\" in \"true\" to get the best image resolution")
-    public ResponseEntity<byte[]> getAvatar(@PathVariable Long id,
-                                            @RequestParam(required = false, defaultValue = "false") boolean large) {
-        return setHeaders(studentService.getAvatar(id, large));
     }
 
     @GetMapping(path = "/avatars")
     @Operation(summary = "Get all avatars")
-    public List<AvatarDto> getAllAvatars(@RequestParam int pageNumber, @RequestParam int pageSize) {
+    public List<AvatarDto> getAllAvatars(@RequestParam @Min(value = 1, message = "Number of page must be greater than 0") int pageNumber,
+                                         @RequestParam @Min(value = 1, message = "Size of page must be greater than 0") int pageSize) {
         return avatarService.getAllAvatars(pageNumber, pageSize);
     }
 
-
     @DeleteMapping(path = "/{id}")
     @Operation(summary = "Delete existing student")
-    public ResponseEntity<Student> deleteStudent(@PathVariable Long id) {
+    public ResponseEntity<Student> deleteStudent(@PathVariable @Min(value = 1, message = "Id must be greater than 0") Long id) {
         return ResponseEntity.of(studentService.deleteStudent(id));
     }
 
@@ -124,23 +138,4 @@ public class StudentController {
                 .body(avatar.getData());
     }
 
-    /*
-     *           URL               PARAMS
-     * /students
-     *     POST /               |
-     *     GET /{id}            |
-     *     GET /                | age, upTo
-     *     GET /{id}/faculty    |
-     *     PATCH /{id}/avatar   |
-     *   * GET /quantity        |
-     *   * GET /avg-age         | quantity
-     *   * GET /last/{quantity} |
-     *     PUT /{id}            |
-     *     GET /{id}/avatar     | large
-     *     DELETE /{id}         |
-     *   * GET /avatars         | pageNumber, pageSize
-     *
-     *   * - new
-     *
-     * */
 }

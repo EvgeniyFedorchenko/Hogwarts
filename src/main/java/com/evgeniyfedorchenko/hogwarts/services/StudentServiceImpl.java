@@ -7,9 +7,8 @@ import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarProcessingException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.FacultyNotFoundException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.IllegalStudentFieldsException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.StudentNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.exceptions.EntityNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.mappers.StudentMapper;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.stereotype.Service;
@@ -37,9 +36,10 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public Student createStudent(Student student) {
-        validateStudentsFields(student);
-        validateFacultyFields(student.getFaculty());
+    @Transactional
+    public StudentOutputDto createStudent(StudentInputDto inputDto) {
+        Student student = fillStudent(inputDto, new Student());
+        Student savedStudent = studentRepository.save(student);
 
         Faculty findedFaculty = findFaculty(inputDto.getFacultyId());
         findedFaculty.addStudent(savedStudent);
@@ -61,7 +61,6 @@ public class StudentServiceImpl implements StudentService {
             return Optional.empty();
         }
 
-        validateStudentsFields(student);
         Optional<Student> studentById = studentRepository.findById(id);
         if (studentById.isEmpty()) {
             return Optional.empty();
@@ -115,13 +114,11 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
+    @Transactional
     public Optional<Student> deleteStudent(Long id) {
 
         Optional<Student> studentOpt = studentRepository.findById(id);
-        if (studentOpt.isPresent()) {
-            studentRepository.delete(studentOpt.get());
-            return studentOpt;
-        } else {
+        if (studentOpt.isEmpty()) {
             return Optional.empty();
         }
 
@@ -155,18 +152,20 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public boolean setAvatar(Long studentId, MultipartFile avatarFile) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() ->
-                        new StudentNotFoundException("Student with ID " + studentId + "not found", "id", String.valueOf(studentId)));
+                .orElseThrow(() -> new EntityNotFoundException("Student with ID " + studentId + " not found"));
 
         return avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
     }
 
     @Override
-    public Avatar getAvatar(Long studentId, boolean large) {
-        Long avatarId = studentRepository.findById(studentId).orElseThrow(() ->
-                        new StudentNotFoundException("Student with ID " + studentId + "not found", "id", String.valueOf(studentId)))
-                .getAvatar()
-                .getId();
+    public Optional<Avatar> getAvatar(Long studentId, boolean large) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new EntityNotFoundException("Student with ID " + studentId + " not found"));
+
+        if (student.getAvatar() == null) {
+            return Optional.empty();
+        }
+        Long avatarId = student.getAvatar().getId();
 
         try {
             return large ? avatarService.getFromLocal(avatarId) : avatarService.findAvatar(avatarId);
@@ -175,28 +174,8 @@ public class StudentServiceImpl implements StudentService {
         }
     }
 
-    private void validateStudentsFields(Student student) {
-        if (student.getName() == null) {
-            throw new IllegalStudentFieldsException(
-                    "Student name cannot be null or empty", "name", student.getName());
-        } else if (student.getAge() <= 0) {
-            throw new IllegalStudentFieldsException(
-                    "Student age cannot be equal zero", "age", String.valueOf(student.getAge()));
-        }
-    }
-
-    private void validateFacultyFields(Faculty faculty) {
-        if (faculty == null || faculty.getId() == null) {
-            throw new IllegalStudentFieldsException("Faculty or its ID must not be null", "faculty", "empty");
-        }
-    }
-
-    private Faculty findFaculty(Long facultyId) {
-        return facultyRepository.findById(facultyId).orElseThrow(() ->
-                new FacultyNotFoundException(
-                        "Faculty with ID " + facultyId + "not found",
-                        "id",
-                        String.valueOf(facultyId)
-                ));
+    private Faculty findFaculty(Long id) {
+        return facultyRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Faculty with ID " + id + " not found"));
     }
 }

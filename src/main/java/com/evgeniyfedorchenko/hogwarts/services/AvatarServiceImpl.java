@@ -40,13 +40,8 @@ public class AvatarServiceImpl implements AvatarService {
 
     @Override
     @Transactional
-    public Avatar findAvatar(Long avatarId) {
-        return avatarRepository
-                .findById(avatarId)
-                .orElseThrow(() -> new AvatarNotFoundException(
-                        "Avatar with ID " + avatarId + "not found",
-                        "Avatar",
-                        String.valueOf(avatarId)));
+    public Optional<Avatar> findAvatar(Long avatarId) {
+        return avatarRepository.findById(avatarId);
     }
 
     @Override
