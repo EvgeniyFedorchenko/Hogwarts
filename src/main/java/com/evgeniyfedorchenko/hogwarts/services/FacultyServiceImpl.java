@@ -35,8 +35,7 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     @Override
-    public Faculty createFaculty(Faculty faculty) {
-        validateFaculty(faculty);
+    public FacultyOutputDto createFaculty(FacultyInputDto inputDto) {
 
         Faculty faculty = fillFaculty(inputDto, new Faculty());
         Faculty savedFaculty = facultyRepository.save(faculty);
@@ -70,6 +69,7 @@ public class FacultyServiceImpl implements FacultyService {
     }
 
     @Override
+    @Transactional
     public Optional<Faculty> deleteFaculty(Long id) {
 
         Optional<Faculty> facultyOpt = facultyRepository.findById(id);

@@ -1,41 +1,48 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
+import com.evgeniyfedorchenko.hogwarts.dto.AvatarDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
-import com.evgeniyfedorchenko.hogwarts.entities.AvatarDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarProcessingException;
-import com.evgeniyfedorchenko.hogwarts.exceptions.parentProjectException.AvatarNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.mappers.AvatarMapper;
 import com.evgeniyfedorchenko.hogwarts.repositories.AvatarRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 
-import static org.springframework.util.StringUtils.getFilenameExtension;
 
 @Service
 public class AvatarServiceImpl implements AvatarService {
 
     private final AvatarRepository avatarRepository;
     private final StudentRepository studentRepository;
+    private final AvatarMapper avatarMapper;
 
     @Value("${path.to.avatars.folder}")
     private Path avatarsDir;
 
-    @Value("${server.port}")
-    private String port;
-
     public AvatarServiceImpl(AvatarRepository avatarRepository,
-                             StudentRepository studentRepository) {
+                             StudentRepository studentRepository,
+                             AvatarMapper avatarMapper) {
         this.avatarRepository = avatarRepository;
         this.studentRepository = studentRepository;
+        this.avatarMapper = avatarMapper;
     }
 
     @Override
@@ -47,6 +54,7 @@ public class AvatarServiceImpl implements AvatarService {
     @Override
     @Transactional
     public boolean downloadToDb(Student student, MultipartFile avatarFile) {
+
         Avatar avatar;
         try {
             avatar = fillAvatar(student, avatarFile);
@@ -61,14 +69,35 @@ public class AvatarServiceImpl implements AvatarService {
     }
 
     private Avatar fillAvatar(Student student, MultipartFile avatarFile) throws IOException {
+        String filePath = avatarsDir + "\\" + student + "." + getExtension(avatarFile.getOriginalFilename());
+        Avatar avatar = avatarRepository.findByStudent_Id(student.getId())
+                .orElseGet(Avatar::new);
 
-        Avatar avatar = avatarRepository.findByStudent_Id(student.getId()).orElseGet(Avatar::new);
-        avatar.setFilePath(avatarsDir + "\\" + student + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
+        avatar.setFilePath(filePath);
         avatar.setMediaType(avatarFile.getContentType());
-        avatar.setData(avatarFile.getBytes());
+        avatar.setData(generatePreview(avatarFile.getBytes(), filePath));
         avatar.setStudent(student);
 
         return avatar;
+    }
+
+    private byte[] generatePreview(byte[] fullData, String filePath) throws IOException {
+
+        try (ByteArrayInputStream bInStream = new ByteArrayInputStream(fullData);
+             ByteArrayOutputStream bOutStream = new ByteArrayOutputStream()) {
+
+            BufferedImage image = ImageIO.read(bInStream);
+            int previewWight = 100;
+            int PreviewHeight = image.getHeight() / (image.getWidth() / previewWight);
+            BufferedImage preview = new BufferedImage(previewWight, PreviewHeight, image.getType());
+
+            Graphics2D graphics = preview.createGraphics();
+            graphics.drawImage(image, 0, 0, previewWight, PreviewHeight, null);
+            graphics.dispose();
+            ImageIO.write(preview, getExtension(filePath), bOutStream);
+
+            return bOutStream.toByteArray();
+        }
     }
 
     @Override
@@ -77,25 +106,47 @@ public class AvatarServiceImpl implements AvatarService {
             if (!Files.exists(avatarsDir) || !Files.isDirectory(avatarsDir)) {
                 Files.createDirectories(avatarsDir);
             }
-            Path path = Path.of(avatarsDir + "\\" + student.toString() + "." + getFilenameExtension(avatarFile.getOriginalFilename()));
+            String fileName = student.toString();
+            String extension = getExtension(avatarFile.getOriginalFilename());
+            Path filePath = Path.of(avatarsDir + fileName + extension);
 
-//            Здесь будет сжатие изображения
+            deleteIfExists(fileName);
 
-            Files.write(path, avatarFile.getBytes());
+            Files.write(filePath, avatarFile.getBytes());
             return true;
+
         } catch (IOException e) {
             throw new RuntimeException(e);   // Если проблемы с папками или доступом к ним
         }
     }
 
+    private void deleteIfExists(String fileNameWithoutExtension) {
+
+        if (Files.exists(avatarsDir)) {
+            File[] listFiles = new File(avatarsDir.toUri()).listFiles();
+            if (listFiles != null) {
+                for (File file : listFiles) {
+                    if (file.getName().contains(fileNameWithoutExtension)) {
+                        file.delete();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     @Override
-    public Avatar getFromLocal(Long avatarId) throws IOException {
-        Avatar avatar = findAvatar(avatarId);
+    public Optional<Avatar> getFromLocal(Long avatarId) throws IOException {
+        Optional<Avatar> avatarOpt = findAvatar(avatarId);
+        if (avatarOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        Avatar fromDb = avatarOpt.get();
         Avatar afr = new Avatar();
 
-        afr.setData(Files.readAllBytes(Path.of(avatar.getFilePath())));
-        afr.setMediaType(avatar.getMediaType());
-        return afr;
+        afr.setData(Files.readAllBytes(Path.of(fromDb.getFilePath())));
+        afr.setMediaType(fromDb.getMediaType());
+        return Optional.of(afr);
     }
 
     @Override
