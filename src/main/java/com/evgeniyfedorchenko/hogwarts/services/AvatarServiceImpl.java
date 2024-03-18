@@ -105,24 +105,19 @@ public class AvatarServiceImpl implements AvatarService {
 
     @Override
     public List<AvatarDto> getAllAvatars(int pageNumber, int pageSize) {
-        PageRequest pageRequest = PageRequest.of(pageNumber, pageSize);
-        List<Avatar> avatars = avatarRepository.findAll(pageRequest).getContent();
-        return avatars.stream()
-                .map(avatar -> new AvatarDto(
-                        avatar.getId(),
-                        avatar.getFilePath(),
-                        avatar.getMediaType(),
-                        "http://localhost:%s/students/%d/avatar".formatted(port, avatar.getStudent().getId()),
-                        avatar.getStudent().getId(),
-                        avatar.getStudent().getName())
-                ).toList();
-
-        /* Или может быть в конструктор AvatarDto передавать весь объект Avatar делать так:
-
-           return avatars.stream()
-                .map(Avatar::new)
+        return avatarRepository.findAll(PageRequest.of(pageNumber - 1, pageSize))
+                .get()
+                .map(avatarMapper::toDto)
                 .toList();
-        */
+    }
+
+    public void deleteAvatar(Student student) {
+        avatarRepository.deleteById(student.getAvatar().getId());
+        deleteIfExists(student.toString());
+    }
+
+    private String getExtension(String filePath) {
+        return StringUtils.getFilenameExtension(filePath);
     }
 }
 

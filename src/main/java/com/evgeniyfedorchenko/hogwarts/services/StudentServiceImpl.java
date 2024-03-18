@@ -1,5 +1,8 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
+import com.evgeniyfedorchenko.hogwarts.controllers.SortOrder;
+import com.evgeniyfedorchenko.hogwarts.dto.StudentInputDto;
+import com.evgeniyfedorchenko.hogwarts.dto.StudentOutputDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
@@ -21,13 +24,16 @@ public class StudentServiceImpl implements StudentService {
     private final StudentRepository studentRepository;
     private final FacultyRepository facultyRepository;
     private final AvatarService avatarService;
+    private final StudentMapper studentMapper;
 
     public StudentServiceImpl(StudentRepository studentRepository,
                               FacultyRepository facultyRepository,
-                              AvatarService avatarService) {
+                              AvatarService avatarService,
+                              StudentMapper studentMapper) {
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
         this.avatarService = avatarService;
+        this.studentMapper = studentMapper;
     }
 
     @Override
@@ -35,22 +41,22 @@ public class StudentServiceImpl implements StudentService {
         validateStudentsFields(student);
         validateFacultyFields(student.getFaculty());
 
-        Faculty findedFaculty = findFaculty(student.getFaculty().getId());
-        Student savedStudent = studentRepository.save(fillStudent(student, new Student()));
-
+        Faculty findedFaculty = findFaculty(inputDto.getFacultyId());
         findedFaculty.addStudent(savedStudent);
         facultyRepository.save(findedFaculty);
 
-        return savedStudent;
+        return studentMapper.toDto(savedStudent);
     }
 
     @Override
-    public Optional<Student> findStudent(Long id) {
-        return studentRepository.findById(id);
+    public Optional<StudentOutputDto> findStudent(Long id) {
+        return studentRepository.findById(id)
+                .map(studentMapper::toDto);
     }
 
     @Override
-    public Optional<Student> updateStudent(Long id, Student student) {
+    @Transactional
+    public Optional<StudentOutputDto> updateStudent(Long id, StudentInputDto inputDto) {
         if (id <= 0L) {
             return Optional.empty();
         }
@@ -60,23 +66,25 @@ public class StudentServiceImpl implements StudentService {
         if (studentById.isEmpty()) {
             return Optional.empty();
         }
-        validateFacultyFields(student.getFaculty());
-        return Optional.of(studentRepository.save(fillStudent(student, studentById.get())));
+        Student student = fillStudent(inputDto, studentById.get());
+        studentRepository.save(student);
+
+        return Optional.of(studentMapper.toDto(student));
     }
 
-    private Student fillStudent(Student src, Student dest) {
+    private Student fillStudent(StudentInputDto src, Student dest) {
 
-        Faculty findedFaculty = findFaculty(src.getFaculty().getId());
+        Faculty findedFaculty = findFaculty(src.getFacultyId());
 
         dest.setName(src.getName());
         dest.setAge(src.getAge());
-        dest.setAvatar(src.getAvatar());
+//        Аватар, если он есть, остается на месте
 
-//        Если меняется факультет - обновляем списки студентов у нового и старого факультета
-//        dest.getFaculty() может быть null, если мы пришли сюда из метода create()
+//          dest.getFaculty() может быть null, если мы пришли сюда из метода create()
         if (dest.getFaculty() != null && !dest.getFaculty().equals(findedFaculty)) {
             facultyRepository.save(dest.getFaculty().removeStudent(dest));
             facultyRepository.save(findedFaculty.addStudent(dest));
+
         } else {
             dest.setFaculty(findedFaculty);
         }
@@ -84,8 +92,16 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public List<Student> findLastStudents(int quantity) {
-        return studentRepository.findLastStudents(quantity);
+    @Transactional
+    public List<StudentOutputDto> searchStudents(String sortParam, SortOrder sortOrder, int pageNumber, int pageSize) {
+        int offset = (pageNumber - 1) * pageSize;
+        List<Student> students = sortOrder == SortOrder.ASC
+                ? studentRepository.findLastStudentsAscSort(sortParam, pageSize, offset)
+                : studentRepository.findLastStudentsDescSort(sortParam, pageSize, offset);
+
+        return students.stream()
+                .map(studentMapper::toDto)
+                .toList();
     }
 
     @Override
@@ -108,11 +124,26 @@ public class StudentServiceImpl implements StudentService {
         } else {
             return Optional.empty();
         }
+
+        Student student = studentOpt.get();
+        if (student.getAvatar() != null) {
+            avatarService.deleteAvatar((student));
+        }
+        facultyRepository.findById(student.getFaculty().getId())
+                .ifPresent(faculty -> facultyRepository.save(faculty.removeStudent(student)));
+
+        studentRepository.deleteById(student.getId());
+        return studentOpt;
     }
 
+
     @Override
-    public List<Student> findStudentsByAge(int age, int upTo) {
-        return upTo == -1L ? studentRepository.findByAge(age) : studentRepository.findByAgeBetween(age, upTo);
+    public List<StudentOutputDto> findStudentsByAge(int age, int upTo) {
+        List<Student> students = upTo == -1L
+                ? studentRepository.findByAge(age)
+                : studentRepository.findByAgeBetween(age, upTo);
+
+        return students.stream().map(studentMapper::toDto).toList();
     }
 
     @Override

@@ -25,8 +25,8 @@ public class FacultyController {
 
     @PostMapping
     @Operation(summary = "Creating a faculty")
-    public Faculty createFaculty(@RequestBody Faculty faculty) {
-        return facultyService.createFaculty(faculty);
+    public FacultyOutputDto createFaculty(@RequestBody @Valid FacultyInputDto inputDto) {
+        return facultyService.createFaculty(inputDto);
     }
 
     @GetMapping(path = "/{id}")

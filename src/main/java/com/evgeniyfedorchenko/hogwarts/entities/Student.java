@@ -1,7 +1,6 @@
 package com.evgeniyfedorchenko.hogwarts.entities;
 
 
-import com.fasterxml.jackson.annotation.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 
@@ -21,11 +20,9 @@ public class Student {
     @NotNull
     @ManyToOne
     @JoinColumn(name = "faculty_id")
-    @JsonIdentityReference(alwaysAsId = true)   // JSON: включать в объект только id факультета (во избежание рекурсии)
     private Faculty faculty;
 
     @OneToOne
-    @JsonIgnore     // TODO: 08.03.2024 Убрать @JsonIgnore чтоб при getStudent() возвращать и картинку тоже
     @JoinColumn(name = "avatar_id")
     private Avatar avatar;
 

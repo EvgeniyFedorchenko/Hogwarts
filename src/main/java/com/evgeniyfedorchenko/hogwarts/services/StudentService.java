@@ -1,5 +1,8 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
+import com.evgeniyfedorchenko.hogwarts.controllers.SortOrder;
+import com.evgeniyfedorchenko.hogwarts.dto.StudentInputDto;
+import com.evgeniyfedorchenko.hogwarts.dto.StudentOutputDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
@@ -10,25 +13,25 @@ import java.util.Optional;
 
 public interface StudentService {
 
-    Student createStudent(Student student);
+    StudentOutputDto createStudent(StudentInputDto studentInputDto);
 
-    Optional<Student> findStudent(Long id);
+    Optional<StudentOutputDto> findStudent(Long id);
 
-    Optional<Student> updateStudent(Long id, Student student);
+    Optional<StudentOutputDto> updateStudent(Long id, StudentInputDto studentInputDto);
 
     Optional<Student> deleteStudent(Long id);
 
-    List<Student> findStudentsByAge(int age, int upTo);
+    List<StudentOutputDto> findStudentsByAge(int age, int upTo);
 
     Long getNumberOfStudents();
 
-    Integer getAverageAge();
+    Double getAverageAge();
 
-    List<Student> findLastStudents(int quantity);
+    List<StudentOutputDto> searchStudents(String sortParam, SortOrder sortOrder, int pageNumber, int pageSize);
 
     Optional<Faculty> getFaculty(Long studentId);
 
     boolean setAvatar(Long id, MultipartFile avatarFile);
 
-    Avatar getAvatar(Long id, boolean large);
+    Optional<Avatar> getAvatar(Long id, boolean large);
 }
