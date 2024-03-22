@@ -105,7 +105,7 @@ class FacultyControllerRestTemplateTest {
 
         ResponseEntity<Faculty> responseEntity = testRestTemplate.postForEntity(
                 baseFacultyUrl(),
-                UNSAVED_FACULTY,
+                UNSAVED_EMPTY_FACULTY,
                 Faculty.class);
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -113,7 +113,7 @@ class FacultyControllerRestTemplateTest {
         assertThat(actualBody).isNotNull()
                 .usingRecursiveComparison()
                 .ignoringFields("id", "students")
-                .isEqualTo(UNSAVED_FACULTY);
+                .isEqualTo(UNSAVED_EMPTY_FACULTY);
         assertThat(actualBody.getId()).isNotNull();
 
         Optional<Faculty> actual = facultyRepository.findById(actualBody.getId());
@@ -350,7 +350,7 @@ class FacultyControllerRestTemplateTest {
                 HttpMethod.PUT,
                 new HttpEntity<>(FACULTY_4_EDITED),
                 String.class,
-                UNSAVED_FACULTY.getId());
+                UNSAVED_EMPTY_FACULTY.getId());
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(responseEntity.getBody()).isNull();

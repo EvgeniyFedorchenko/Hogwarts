@@ -1,5 +1,6 @@
 package com.evgeniyfedorchenko.hogwarts;
 
+import com.evgeniyfedorchenko.hogwarts.dto.StudentInputDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Color;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
@@ -24,7 +25,7 @@ public class Constants {
     public static final Faculty FACULTY_3 = new Faculty();
     public static final Faculty FACULTY_4 = new Faculty();
     public static final Faculty FACULTY_4_EDITED = new Faculty();
-    public static final Faculty UNSAVED_FACULTY = new Faculty();
+    public static final Faculty UNSAVED_EMPTY_FACULTY = new Faculty();
 
     /**
      * Директория, в которой сохраняется ресурс во время теста.
@@ -91,7 +92,7 @@ public class Constants {
     }
 
     private static void facultiesConstantsInitialize() {
-        Stream.of(FACULTY_1, FACULTY_2, FACULTY_3, FACULTY_4, UNSAVED_FACULTY)
+        Stream.of(FACULTY_1, FACULTY_2, FACULTY_3, FACULTY_4, UNSAVED_EMPTY_FACULTY)
                 .forEach(faculty -> {
                     faculty.setId(faker.random().nextLong(100, 200));
                     faculty.setName(faker.letterify("????????"));
@@ -134,5 +135,15 @@ public class Constants {
         STUDENT_4_EDITED.setFaculty(STUDENT_4.getFaculty());
 
         STUDENT_WITHOUT_FACULTY.setName("StudentWithoutFaculty");
+    }
+
+    public static StudentInputDto toInputDto(Student student) {
+        StudentInputDto inputDto = new StudentInputDto();
+
+        inputDto.setName(student.getName());
+        inputDto.setAge(student.getAge());
+        inputDto.setFacultyId(student.getFaculty().getId());
+
+        return inputDto;
     }
 }

@@ -136,6 +136,7 @@ public class StudentServiceImpl implements StudentService {
 
 
     @Override
+    @Transactional   // Нужно вытагивать еще и аватары
     public List<StudentOutputDto> findStudentsByAge(int age, int upTo) {
         List<Student> students = upTo == -1L
                 ? studentRepository.findByAge(age)

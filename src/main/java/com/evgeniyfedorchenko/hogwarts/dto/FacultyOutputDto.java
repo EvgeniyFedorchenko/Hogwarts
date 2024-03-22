@@ -3,6 +3,7 @@ package com.evgeniyfedorchenko.hogwarts.dto;
 import com.evgeniyfedorchenko.hogwarts.entities.Color;
 
 import java.util.List;
+import java.util.Objects;
 
 public class FacultyOutputDto {
 
@@ -41,5 +42,30 @@ public class FacultyOutputDto {
 
     public void setStudentIds(List<Long> studentIds) {
         this.studentIds = studentIds;
+    }
+
+    @Override
+    public String toString() {
+            return "Faculty %d - %s, clr, students: %s".formatted(id, name, studentIds);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        FacultyOutputDto outputDto = (FacultyOutputDto) o;
+        return id.equals(outputDto.id)
+               && name.equals(outputDto.name)
+               && color == outputDto.color
+               && Objects.equals(studentIds, outputDto.studentIds);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name, color, studentIds);
     }
 }
