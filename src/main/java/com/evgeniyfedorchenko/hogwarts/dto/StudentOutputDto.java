@@ -1,5 +1,7 @@
 package com.evgeniyfedorchenko.hogwarts.dto;
 
+import java.util.Objects;
+
 public class StudentOutputDto {
 
     private Long id;
@@ -46,5 +48,31 @@ public class StudentOutputDto {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    @Override
+    public String toString() {
+        return "StudentOutputDto:ID%d-%s,%dy.o.(%d)".formatted(id, name, age, facultyId);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        StudentOutputDto that = (StudentOutputDto) o;
+        return age == that.age
+               && id.equals(that.id)
+               && name.equals(that.name)
+               && facultyId.equals(that.facultyId)
+               && Objects.equals(avatarUrl, that.avatarUrl);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name, age, facultyId, avatarUrl);
     }
 }

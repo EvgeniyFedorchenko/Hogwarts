@@ -86,6 +86,7 @@ public class Student {
 
     @Override
     public String toString() {
+        Student student = this;
         return "StudentID%d-%s,%dy.o.(%s)".formatted(id, name, age, faculty.getName());
     }
 }

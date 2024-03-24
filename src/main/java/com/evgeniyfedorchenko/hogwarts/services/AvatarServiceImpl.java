@@ -17,9 +17,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -81,32 +79,24 @@ public class AvatarServiceImpl implements AvatarService {
 
         avatar.setFilePath(filePath);
         avatar.setMediaType(avatarFile.getContentType());
-        avatar.setData(generatePreview(avatarFile.getBytes(), filePath));
+        avatar.setData(generatePreview(filePath));
         avatar.setStudent(student);
 
         return avatar;
     }
 
-    private byte[] generatePreview(byte[] fullData, String filePath) throws IOException {
+    private byte[] generatePreview(String filePath) throws IOException {
+        int previewWight = 100;
+        int previewHeight = image.getHeight() / (image.getWidth() / previewWight);
 
-        /* Если мы успешно прочи байты при передаче в параметре, то стримы откроются без проблем */
+        BufferedImage image = ImageIO.read(new File(filePath));
+        BufferedImage preview = new BufferedImage(previewWight, previewHeight, image.getType());
+        preview.getGraphics().drawImage(image, 0, 0, previewWight, previewHeight, null);
 
-        try (ByteArrayInputStream bInStream = new ByteArrayInputStream(fullData);
-             ByteArrayOutputStream bOutStream = new ByteArrayOutputStream()) {
-
-            BufferedImage image = ImageIO.read(bInStream);
-            int previewWight = 100;
-            int PreviewHeight = image.getHeight() / (image.getWidth() / previewWight);
-            BufferedImage preview = new BufferedImage(previewWight, PreviewHeight, image.getType());
-
-            Graphics2D graphics = preview.createGraphics();
-            graphics.drawImage(image, 0, 0, previewWight, PreviewHeight, null);
-            graphics.dispose();
-            ImageIO.write(preview, getExtension(filePath), bOutStream);
-
-            logger.info("Image compression was successful");
-            return bOutStream.toByteArray();
-        }
+        ByteArrayOutputStream baoStream = new ByteArrayOutputStream();
+        ImageIO.write(preview, getExtension(filePath), baoStream);
+        logger.info("Image compression was successful");
+        return baoStream.toByteArray();
     }
 
     @Override
@@ -120,8 +110,8 @@ public class AvatarServiceImpl implements AvatarService {
             throw new RuntimeException(e);
         }
             String fileName = student.toString();
-            String extension = getExtension(avatarFile.getOriginalFilename());
-            Path filePath = Path.of(avatarsDir + fileName + extension);
+            String extension = "." + getExtension(avatarFile.getOriginalFilename());
+            Path filePath = Path.of(avatarsDir + "\\" + fileName + extension);
 
             deleteIfExists(fileName);
 

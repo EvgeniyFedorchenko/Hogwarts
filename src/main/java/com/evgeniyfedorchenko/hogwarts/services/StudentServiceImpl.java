@@ -1,6 +1,7 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
 import com.evgeniyfedorchenko.hogwarts.controllers.SortOrder;
+import com.evgeniyfedorchenko.hogwarts.dto.FacultyOutputDto;
 import com.evgeniyfedorchenko.hogwarts.dto.StudentInputDto;
 import com.evgeniyfedorchenko.hogwarts.dto.StudentOutputDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
@@ -8,6 +9,7 @@ import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarProcessingException;
 import com.evgeniyfedorchenko.hogwarts.exceptions.EntityNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.mappers.FacultyMapper;
 import com.evgeniyfedorchenko.hogwarts.mappers.StudentMapper;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
@@ -27,17 +29,20 @@ public class StudentServiceImpl implements StudentService {
     private final FacultyRepository facultyRepository;
     private final AvatarService avatarService;
     private final StudentMapper studentMapper;
-    
+    private final FacultyMapper facultyMapper;
     private final Logger logger = LoggerFactory.getLogger(StudentServiceImpl.class);
+
 
     public StudentServiceImpl(StudentRepository studentRepository,
                               FacultyRepository facultyRepository,
                               AvatarService avatarService,
-                              StudentMapper studentMapper) {
+                              StudentMapper studentMapper,
+                              FacultyMapper facultyMapper) {
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
         this.avatarService = avatarService;
         this.studentMapper = studentMapper;
+        this.facultyMapper = facultyMapper;
     }
 
     @Override
@@ -146,6 +151,7 @@ public class StudentServiceImpl implements StudentService {
 
 
     @Override
+    @Transactional   // Нужно вытагивать еще и аватары
     public List<StudentOutputDto> findStudentsByAge(int age, int upTo) {
         List<Student> students = upTo == -1L
                 ? studentRepository.findByAge(age)
@@ -158,18 +164,21 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public Optional<Faculty> getFaculty(Long studentId) {
-        Optional<Faculty> faculty = studentRepository.findById(studentId)
+    public Optional<FacultyOutputDto> getFaculty(Long studentId) {
+        Optional<Faculty> facultyOpt = studentRepository.findById(studentId)
                 .map(Student::getFaculty);
+        if (facultyOpt.isEmpty()) {
 //        Используется warn потому что у меня не предусмотрены студенты без факультетов
         logger.warn("StudentID {} doesn't have faculty", studentId);
-        return faculty;
+        return Optional.empty();
+        }
+        return faculty.map(facultyMapper::toDto);
+
     }
 
     @Override
     public boolean setAvatar(Long studentId, MultipartFile avatarFile) {
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> {
+        Student student = studentRepository.findById(studentId).orElseThrow(() -> {
                     logger.error("Filed to find studentID {} for set Avatar", studentId);
                     throw new EntityNotFoundException("Student with ID " + studentId + " not found");
                 });
@@ -177,15 +186,16 @@ public class StudentServiceImpl implements StudentService {
         boolean resultOfSaving = avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
         logger.info("Successful saving avatar and set its to {}", student);
         return resultOfSaving;
+
     }
 
     @Override
     public Optional<Avatar> getAvatar(Long studentId, boolean large) {
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> {
+        Student student = studentRepository.findById(studentId).orElseThrow(() -> {
                     logger.error("Filed to search studentID {} in repo for get his avatar", studentId);
                     throw new EntityNotFoundException("Student with ID " + studentId + " not found");
                 });
+
 
         if (student.getAvatar() == null) {
             logger.info("Avatar of studentID {} not found, but was requested", studentId);
@@ -209,10 +219,10 @@ public class StudentServiceImpl implements StudentService {
     }
 
     private Faculty findFaculty(Long id) {
-        return facultyRepository.findById(id)
-                .orElseThrow(() -> {
+        return facultyRepository.findById(id).orElseThrow(() -> {
                     logger.error("Filed to found FacultyID {} for set to student", id);
                     throw new EntityNotFoundException("Faculty with ID " + id + " not found");
                 });
+
     }
 }

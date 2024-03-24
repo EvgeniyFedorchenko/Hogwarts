@@ -1,10 +1,10 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
 import com.evgeniyfedorchenko.hogwarts.controllers.SortOrder;
+import com.evgeniyfedorchenko.hogwarts.dto.FacultyOutputDto;
 import com.evgeniyfedorchenko.hogwarts.dto.StudentInputDto;
 import com.evgeniyfedorchenko.hogwarts.dto.StudentOutputDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
-import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,7 +29,7 @@ public interface StudentService {
 
     List<StudentOutputDto> searchStudents(String sortParam, SortOrder sortOrder, int pageNumber, int pageSize);
 
-    Optional<Faculty> getFaculty(Long studentId);
+    Optional<FacultyOutputDto> getFaculty(Long studentId);
 
     boolean setAvatar(Long id, MultipartFile avatarFile);
 

@@ -1,5 +1,6 @@
 package com.evgeniyfedorchenko.hogwarts;
 
+import com.evgeniyfedorchenko.hogwarts.dto.StudentInputDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
 import com.evgeniyfedorchenko.hogwarts.entities.Color;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
@@ -24,7 +25,7 @@ public class Constants {
     public static final Faculty FACULTY_3 = new Faculty();
     public static final Faculty FACULTY_4 = new Faculty();
     public static final Faculty FACULTY_4_EDITED = new Faculty();
-    public static final Faculty UNSAVED_FACULTY = new Faculty();
+    public static final Faculty UNSAVED_EMPTY_FACULTY = new Faculty();
 
     /**
      * Директория, в которой сохраняется ресурс во время теста.
@@ -33,12 +34,12 @@ public class Constants {
     public static Path testResourceDir;
 
     /**
-     * Путь, по которому должна находиться ресурс после окончания теста.
+     * Путь, по которому должен находиться ресурс после окончания теста.
      * Необходимо ".formatted(Student targetStudent)" для получения пути.
      * Директория удаляется после теста через @AfterEach)
      */
     public static String sentResourcePath() {
-        return testResourceDir + "\\%s." + getFilenameExtension(String.valueOf(testResoursePath()));
+        return testResourceDir + "\\%s." + getFilenameExtension(String.valueOf(testResourcePath()));
     }
 
     /**
@@ -47,22 +48,22 @@ public class Constants {
      */
     public static byte[] sentResourceBytes() {
         try {
-            return Files.readAllBytes(testResoursePath());   // Исходник, который отправляем
+            return Files.readAllBytes(testResourcePath());   // Исходник, который отправляем
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     /**
      * Путь к исходному тестовому ресурсу
      */
-    public static Path testResoursePath() {
+    public static Path testResourcePath() {
         try {
             return new ClassPathResource("static/image.jpg").getFile().toPath();
         } catch (IOException e) {
             throw new RuntimeException("Cannot to read test-resource");
         }
+
     }
 
     public static final Avatar AVATAR_1 = new Avatar();
@@ -91,7 +92,7 @@ public class Constants {
     }
 
     private static void facultiesConstantsInitialize() {
-        Stream.of(FACULTY_1, FACULTY_2, FACULTY_3, FACULTY_4, UNSAVED_FACULTY)
+        Stream.of(FACULTY_1, FACULTY_2, FACULTY_3, FACULTY_4, UNSAVED_EMPTY_FACULTY)
                 .forEach(faculty -> {
                     faculty.setId(faker.random().nextLong(100, 200));
                     faculty.setName(faker.letterify("????????"));
@@ -111,7 +112,7 @@ public class Constants {
             AVATAR_1.setStudent(STUDENT_1);
 
             AVATAR_1.setFilePath(sentResourcePath());
-            AVATAR_1.setMediaType(String.valueOf(Files.probeContentType(testResoursePath())));
+            AVATAR_1.setMediaType(String.valueOf(Files.probeContentType(testResourcePath())));
             AVATAR_1.setData(sentResourceBytes());
         } catch (IOException e) {
             throw new AvatarProcessingException("Test-avatar initialising filed", e);
@@ -128,11 +129,20 @@ public class Constants {
                     student.setName(faker.letterify("????????"));
                     student.setAge(faker.random().nextInt(18, 30));
                 });
-//        STUDENT_1.setAvatar(AVATAR_1);
 
         STUDENT_4_EDITED.setName(STUDENT_4.getName() + "Edited");
         STUDENT_4_EDITED.setFaculty(STUDENT_4.getFaculty());
 
         STUDENT_WITHOUT_FACULTY.setName("StudentWithoutFaculty");
+    }
+
+    public static StudentInputDto toInputDto(Student student) {
+        StudentInputDto inputDto = new StudentInputDto();
+
+        inputDto.setName(student.getName());
+        inputDto.setAge(student.getAge());
+        inputDto.setFacultyId(student.getFaculty().getId());
+
+        return inputDto;
     }
 }

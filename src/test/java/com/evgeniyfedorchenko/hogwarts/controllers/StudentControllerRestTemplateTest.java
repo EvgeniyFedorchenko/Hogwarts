@@ -1,9 +1,16 @@
 package com.evgeniyfedorchenko.hogwarts.controllers;
 
+import com.evgeniyfedorchenko.hogwarts.TestUtils;
+import com.evgeniyfedorchenko.hogwarts.dto.AvatarDto;
+import com.evgeniyfedorchenko.hogwarts.dto.FacultyOutputDto;
+import com.evgeniyfedorchenko.hogwarts.dto.StudentInputDto;
+import com.evgeniyfedorchenko.hogwarts.dto.StudentOutputDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
-import com.evgeniyfedorchenko.hogwarts.entities.AvatarDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
+import com.evgeniyfedorchenko.hogwarts.mappers.AvatarMapper;
+import com.evgeniyfedorchenko.hogwarts.mappers.FacultyMapper;
+import com.evgeniyfedorchenko.hogwarts.mappers.StudentMapper;
 import com.evgeniyfedorchenko.hogwarts.repositories.AvatarRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
@@ -34,6 +41,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -50,6 +60,36 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class StudentControllerRestTemplateTest {
 
+    @LocalServerPort
+    private int port;
+
+    /*   Repositories   */
+    @Autowired
+    private FacultyRepository facultyRepository;
+    @Autowired
+    private AvatarRepository avatarRepository;
+    @Autowired
+    private StudentRepository studentRepository;
+
+    /*   Mappers   */
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private FacultyMapper facultyMapper;
+    @Autowired
+    private AvatarMapper avatarMapper;
+    @Autowired
+    private StudentMapper studentMapper;
+
+    /*   Others   */
+    @Autowired
+    private TestRestTemplate testRestTemplate;
+    @Autowired
+    private TestUtils testUtils;
+    private List<Faculty> savedFaculties;
+    private final List<Student> savedStudents = new ArrayList<>();
+    private final Random random = new Random();
+
     @Container
     private static final PostgreSQLContainer<?> postgresContainer =
             new PostgreSQLContainer<>("postgres:latest");
@@ -63,61 +103,25 @@ public class StudentControllerRestTemplateTest {
         registry.add("spring.datasource.hikari.auto-commit", () -> true);
     }
 
-    @LocalServerPort
-    private int port;
-
-    @Autowired
-    private FacultyRepository facultyRepository;
-    @Autowired
-    private AvatarRepository avatarRepository;
-    @Autowired
-    private StudentRepository studentRepository;
-
-    @Autowired
-    private TestRestTemplate testRestTemplate;
-    private RestTemplate patchRestTemplate;
-
-    private List<Faculty> savedFaculties;
-    private List<Student> savedStudents;
-    @Autowired
-    ObjectMapper objectMapper;
-    Random random = new Random();
-
-
-    private String getFormattedBody(Student student) {
-        return """
-                {
-                    "id": %d,
-                    "name": "%s",
-                    "age": %d,
-                    "faculty": {
-                        "id": %d
-                  }
-                }""".formatted(student.getId(), student.getName(), student.getAge(), student.getFaculty().getId());
-    }
-
-
     @BeforeEach
     public void beforeEach() {
         testConstantsInitialisation();
         savedFaculties = facultyRepository.saveAll(TEST_lIST_OF_4_FACULTY);
 
-//        Всем студентам присваиваем рандомный факультет (сохраненный в БД) и тоже сохраняем
-        savedStudents = studentRepository.saveAll(TEST_lIST_OF_4_STUDENTS
-                .stream()
-                .peek(student -> {
-                    int randomFaculty = random.nextInt(0, savedFaculties.size());
-                    student.setFaculty(savedFaculties.get(randomFaculty));
-                })
-                .toList());
+        /* Всем студентам присваиваем рандомный факультет (сохраненный в БД) и тоже сохраняем
+           А так же факультетам раздаем этих студентов и обновляем их в БД */
+        TEST_lIST_OF_4_STUDENTS.forEach(student -> {
+            Faculty randomFaculty = savedFaculties.get(random.nextInt(0, savedFaculties.size()));
+            student.setFaculty(randomFaculty);
+            Student savedStudent = studentRepository.save(student);
+            facultyRepository.save(randomFaculty.addStudent(savedStudent));
+            savedStudents.add(savedStudent);
+        });
+//        Обновляем переменную
+        savedFaculties = facultyRepository.findAll();
 
         int randomNum = random.nextInt(0, savedFaculties.size());
         UNSAVED_STUDENT.setFaculty(savedFaculties.get(randomNum));
-
-//        Для метода PATCH localhost:port/students/{id}/avatar
-        this.patchRestTemplate = testRestTemplate.getRestTemplate();
-        HttpClient httpClient = HttpClientBuilder.create().build();
-        this.patchRestTemplate.setRequestFactory(new HttpComponentsClientHttpRequestFactory(httpClient));
     }
 
     @AfterEach
@@ -134,6 +138,8 @@ public class StudentControllerRestTemplateTest {
             }
         }
         Files.deleteIfExists(testResourceDir);
+        savedStudents.clear();
+        savedFaculties.clear();
     }
 
     @AfterAll
@@ -145,25 +151,28 @@ public class StudentControllerRestTemplateTest {
         return "http://localhost:%d/students".formatted(port);
     }
 
+    private RestTemplate patchedRestTemplate(TestRestTemplate testRestTemplate) {
+        RestTemplate patchRestTemplate = this.testRestTemplate.getRestTemplate();
+        HttpClient httpClient = HttpClientBuilder.create().build();
+        patchRestTemplate.setRequestFactory(new HttpComponentsClientHttpRequestFactory(httpClient));
+        return patchRestTemplate;
+    }
+
     @Test
     void createStudentsPositiveTest() {
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Content-Type", "application/json");
-
-
-        ResponseEntity<Student> responseEntity = testRestTemplate.postForEntity(
+        ResponseEntity<StudentOutputDto> responseEntity = testRestTemplate.postForEntity(
                 baseStudentUrl(),
-                new HttpEntity<>(getFormattedBody(UNSAVED_STUDENT), headers),
-                Student.class);
+                testUtils.toInputDto(UNSAVED_STUDENT),
+                StudentOutputDto.class);
 
         // Проверка ответа от сервера
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody())
                 .isNotNull()
                 .usingRecursiveComparison()
-                .ignoringFields("id", "faculty")
-                .isEqualTo(UNSAVED_STUDENT);
+                .ignoringFields("id")
+                .isEqualTo(studentMapper.toDto(UNSAVED_STUDENT));
 
         // Проверка, что в бд и правда сохранен нужный объект
         Optional<Student> studentFromDb = studentRepository.findById(responseEntity.getBody().getId());
@@ -171,9 +180,11 @@ public class StudentControllerRestTemplateTest {
         assertThat(studentFromDb).get()
                 .usingRecursiveComparison()
                 .ignoringFields("id", "faculty.students")
-                .isEqualTo(UNSAVED_STUDENT);
+                .isEqualTo(UNSAVED_STUDENT);   /* -> UNSAVED_STUDENT - это локальная переменная.
+                При сохранении его в БД, его факультет в курсе о нем (что покажет следующий ассерт)
+                Но локально поле faculty у UNSAVED_STUDENT не обновлено, и него новый студент не добавляется */
 
-        // Проверка, что в факультет и правда зачислен свежесохраненный студент
+        // Проверка, что в БД в факультет и правда зачислен свежесохраненный студент
         Optional<Faculty> facultyFromDb = facultyRepository.findById(UNSAVED_STUDENT.getFaculty().getId());
         assertThat(facultyFromDb).isPresent();
         assertThat(facultyFromDb.get().getStudents())
@@ -189,12 +200,12 @@ public class StudentControllerRestTemplateTest {
 
         ResponseEntity<String> responseEntity = testRestTemplate.postForEntity(
                 baseStudentUrl(),
-                UNSAVED_STUDENT,
+                testUtils.toInputDto(UNSAVED_STUDENT),
                 String.class);
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(responseEntity.getBody())
                 .isNotNull()
-                .matches("Value (.+?) of parameter (.+?) of student is invalid");
+                .matches("Validation error in parameter ([1-9])");
         assertThat(countStudentsBeforeAdding).isEqualTo(studentRepository.findAll());
 
         // Невалидный только возраст
@@ -203,23 +214,27 @@ public class StudentControllerRestTemplateTest {
 
         ResponseEntity<String> responseEntity1 = testRestTemplate.postForEntity(
                 baseStudentUrl(),
-                UNSAVED_STUDENT,
+                testUtils.toInputDto(UNSAVED_STUDENT),
                 String.class);
         assertThat(responseEntity1.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(responseEntity1.getBody())
                 .isNotNull()
-                .matches("Value (.+?) of parameter (.+?) of student is invalid");
+                .matches("Validation error in parameter ([1-9])");
         assertThat(countStudentsBeforeAdding).isEqualTo(studentRepository.findAll());
 
-        // Студент с faculty = null
+        // Невалидный факультет
+        StudentInputDto specialInputDto = testUtils.toInputDto(UNSAVED_STUDENT);
+        specialInputDto.setFacultyId(0L);
+
         ResponseEntity<String> responseEntity2 = testRestTemplate.postForEntity(
                 baseStudentUrl(),
-                STUDENT_WITHOUT_FACULTY,
+                specialInputDto,
                 String.class);
         assertThat(responseEntity2.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(responseEntity2.getBody())
                 .isNotNull()
-                .matches("Value (.+?) of parameter (.+?) of student is invalid");
+                .matches("Validation error in parameter ([1-9])");
+
         assertThat(countStudentsBeforeAdding).isEqualTo(studentRepository.findAll());
     }
 
@@ -227,17 +242,16 @@ public class StudentControllerRestTemplateTest {
     void getStudentPositiveTest() {
         Student expected = savedStudents.get(0);
 
-        ResponseEntity<Student> responseEntity = testRestTemplate.getForEntity(
+        ResponseEntity<StudentOutputDto> responseEntity = testRestTemplate.getForEntity(
                 baseStudentUrl() + "/{id}",
-                Student.class,
+                StudentOutputDto.class,
                 expected.getId());
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody())
                 .isNotNull()
                 .usingRecursiveComparison()
-                .ignoringFields("faculty")
-                .isEqualTo(expected);
+                .isEqualTo(studentMapper.toDto(expected));
     }
 
     @Test
@@ -246,96 +260,156 @@ public class StudentControllerRestTemplateTest {
         ResponseEntity<String> responseEntity = testRestTemplate.getForEntity(
                 baseStudentUrl() + "/{id}",
                 String.class,
-                -1L);
+                -1);
 
-        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(responseEntity.getBody()).isNull();
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(responseEntity.getBody()).isNotNull()
+                .isEqualTo("Validation errors:\n1. Id must be greater than 0\n");
+
+//        Проверка потенциально годного, но несуществующего id
+        long nonexistentId;
+        List<Long> actualIds = studentRepository.findAll().stream().map(Student::getId).toList();
+        do {
+            nonexistentId = random.nextLong(1, Long.MAX_VALUE);
+        } while (actualIds.contains(nonexistentId));
+// TODO: 24.03.2024 вынести в метод нахождение несуществующего id
+        ResponseEntity<String> responseEntity2 = testRestTemplate.getForEntity(
+                baseStudentUrl() + "/{id}",
+                String.class,
+                nonexistentId);
+
+        assertThat(responseEntity2.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(responseEntity2.getBody()).isNull();
+
     }
 
     @Test
     void getStudentsByAgeExactMatchTest() {
 
         Student targetStudent = savedStudents.get(0);
-        ResponseEntity<List<Student>> responseEntity = testRestTemplate.exchange(
-                baseStudentUrl() + "?age=" + targetStudent.getAge(),
+        ResponseEntity<List<StudentOutputDto>> responseEntity = testRestTemplate.exchange(
+                baseStudentUrl() + "/byAge?age={age}&upTo={upTo}",
                 HttpMethod.GET,
                 RequestEntity.EMPTY,
                 new ParameterizedTypeReference<>() {
-                });
+                },
+                targetStudent.getAge(), targetStudent.getAge());
 
-        List<Student> expected = savedStudents.stream()
+        List<StudentOutputDto> expected = savedStudents.stream()
                 .filter(student -> student.getAge() == targetStudent.getAge())
+                .map(s -> studentMapper.toDto(s))
                 .toList();
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody())
                 .isNotNull()
-                .isEqualTo(expected);
-
+                .hasSameElementsAs((expected));
     }
 
     @Test
     void getStudentsByAgeBetweenTest() {
 
-        List<Student> expected = savedStudents.stream()
-                .sorted(Comparator.comparingInt(Student::getAge))
-                .toList()
-                .subList(0, 3);
+        int age = savedStudents.get(0).getAge();
+        int upTo;
+        do {
+            upTo = savedStudents.get(1).getAge();
+        } while (upTo == age);
 
-        ResponseEntity<List<Student>> responseEntity = testRestTemplate.exchange(
-                baseStudentUrl() + "?age=%s&upTo=%s".formatted(expected.get(0).getAge(), expected.get(expected.size() - 1).getAge()),
+        if (upTo < age) {
+            int temp = age;
+            age = upTo;
+            upTo = temp;
+        }
+        int finalAge = age;
+        int finalUpTo = upTo;
+
+        Collections.shuffle(savedStudents);
+        List<StudentOutputDto> expected = savedStudents.stream()
+                .filter(student -> student.getAge() >= finalAge && student.getAge() <= finalUpTo)
+                .map(s -> studentMapper.toDto(s))
+                .toList();
+
+        ResponseEntity<List<StudentOutputDto>> responseEntity = testRestTemplate.exchange(
+                baseStudentUrl() + "/byAge?age={age}&upTo={upTo}",
                 HttpMethod.GET,
                 RequestEntity.EMPTY,
                 new ParameterizedTypeReference<>() {
-                });
+                },
+                age, upTo
+        );
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody())
                 .isNotNull()
-                .containsAll(expected)
-                .containsOnlyOnceElementsOf(expected);
+                .hasSameElementsAs(expected);
     }
 
     @Test
     void getStudentsByAgeWithoutMatchTest() {
 
-        ResponseEntity<List<Student>> responseEntity = testRestTemplate.exchange(
-                baseStudentUrl() + "?age=-1",
+        int age;
+        int upTo;
+        List<Integer> ages = savedStudents.stream().map(Student::getAge).toList();
+        do {
+            age = random.nextInt(1, Integer.MAX_VALUE);
+            upTo = random.nextInt(1, Integer.MAX_VALUE);
+        } while (ages.contains(age) && ages.contains(upTo));
+
+        ResponseEntity<List<StudentOutputDto>> responseEntity = testRestTemplate.exchange(
+                baseStudentUrl() + "/byAge?age={age}&upTo={upTo}",
                 HttpMethod.GET,
                 RequestEntity.EMPTY,
                 new ParameterizedTypeReference<>() {
-                });
+                },
+                age, upTo
+        );
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(responseEntity.getBody()).isEmpty();
+        assertThat(responseEntity.getBody()).isNotNull()
+                .hasSize(0);
     }
 
     @Test
     void getFacultyOfStudentPositiveTest() {
         Student targetStudent = savedStudents.get(0);
 
-        ResponseEntity<Faculty> responseEntity = testRestTemplate.getForEntity(
+        ResponseEntity<FacultyOutputDto> responseEntity = testRestTemplate.getForEntity(
                 baseStudentUrl() + "/{id}/faculty",
-                Faculty.class,
+                FacultyOutputDto.class,
                 targetStudent.getId());
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody())
                 .isNotNull()
-                .usingRecursiveComparison()
-                .ignoringFields("students")
-                .isEqualTo(targetStudent.getFaculty());
+                .isEqualTo(facultyMapper.toDto(targetStudent.getFaculty()));
     }
 
     @Test
-    void getFacultyOfStudentNegativeTest() {
-        ResponseEntity<Faculty> responseEntity = testRestTemplate.getForEntity(
-                baseStudentUrl() + "/{id}/faculty",
-                Faculty.class,
-                -1L);
+    void getFacultyOfNonexistentStudentNegativeTest() {
+        List<Long> ids = studentRepository.findAll().stream().map(Student::getId).toList();
+        Long nonexistentId;
+        do {
+            nonexistentId = random.nextLong(0, Long.MAX_VALUE);
+        } while (ids.contains(nonexistentId));
 
+        ResponseEntity<String> responseEntity = testRestTemplate.getForEntity(
+                baseStudentUrl() + "/{id}/faculty",
+                String.class,
+                nonexistentId);
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(responseEntity.getBody()).isNull();
+    }
+
+    @Test
+    void getFacultyOfStudentWithNegativeIdTest() {
+        ResponseEntity<String> responseEntity = testRestTemplate.getForEntity(
+                baseStudentUrl() + "/{id}/faculty",
+                String.class,
+                -1L);
+
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(responseEntity.getBody()).isNotNull()
+                .isEqualTo("Validation errors:\n1. Id must be greater than 0\n");
     }
 
     @Test
@@ -347,19 +421,19 @@ public class StudentControllerRestTemplateTest {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Content-Type", "application/json");
 
-        ResponseEntity<Student> responseEntity = testRestTemplate.exchange(
+        ResponseEntity<StudentOutputDto> responseEntity = testRestTemplate.exchange(
                 baseStudentUrl() + "/{id}",
                 HttpMethod.PUT,
-                new HttpEntity<>(getFormattedBody(STUDENT_4_EDITED), headers),
-                Student.class,
+                new HttpEntity<>(studentMapper.toDto(STUDENT_4_EDITED), headers),
+                StudentOutputDto.class,
                 targetStudent.getId()
         );
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody()).isNotNull()
                 .usingRecursiveComparison()
-                .ignoringFields("id", "faculty")
-                .isEqualTo(STUDENT_4_EDITED);
+                .ignoringFields("id")
+                .isEqualTo(studentMapper.toDto(STUDENT_4_EDITED));
 
         Optional<Student> fromDb = studentRepository.findById(targetStudent.getId());
         assertThat(fromDb).isPresent();
@@ -372,89 +446,80 @@ public class StudentControllerRestTemplateTest {
     @Test
     void updateStudentWithChangeFacultyPositiveTest() {
         Student targetStudent = savedStudents.get(0);
-        Faculty oldFacultyOfTarget = targetStudent.getFaculty();
+        Long oldFacultyIdOfTarget = targetStudent.getFaculty().getId();
 
-        // Ставим студенту "STUDENT_4_EDITED" факультет, отличный от факультета у студента "targetStudent"
-        for (Faculty faculty : savedFaculties) {
-            if (!faculty.equals(targetStudent.getFaculty())) {
-                STUDENT_4_EDITED.setFaculty(faculty);
-            }
+        do {     // Ставим студенту "STUDENT_4_EDITED" факультет, отличный от факультета у студента "targetStudent"
+            STUDENT_4_EDITED.setFaculty(savedFaculties.get(random.nextInt(0, savedFaculties.size())));
         }
+        while (STUDENT_4_EDITED.getFaculty().getId().equals(oldFacultyIdOfTarget));
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("Content-Type", "application/json");
 
-        ResponseEntity<Student> responseEntity = testRestTemplate.exchange(
+        ResponseEntity<StudentOutputDto> responseEntity = testRestTemplate.exchange(
                 baseStudentUrl() + "/{id}",
                 HttpMethod.PUT,
-                new HttpEntity<>(getFormattedBody(STUDENT_4_EDITED), headers),
-                Student.class,
+                new HttpEntity<>(studentMapper.toDto(STUDENT_4_EDITED), headers),
+                StudentOutputDto.class,
                 targetStudent.getId()
         );
-
+//        Проверка ответа сервера
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody()).isNotNull()
                 .usingRecursiveComparison()
-                .ignoringFields("id", "faculty")
-                .isEqualTo(STUDENT_4_EDITED);
+                .ignoringFields("id")
+                .isEqualTo(studentMapper.toDto(STUDENT_4_EDITED));
 
-        Optional<Student> actual = studentRepository.findById(targetStudent.getId());
-        assertThat(actual).isPresent();
-        assertThat(actual.get())
+//        Проверка, что в БД студент действительно обновился
+        Student actualTarget = studentRepository.findById(targetStudent.getId()).orElseThrow();
+        assertThat(actualTarget)
                 .usingRecursiveComparison()
                 .ignoringFields("id", "faculty.students")
-                .isEqualTo(STUDENT_4_EDITED);
+                .isEqualTo(STUDENT_4_EDITED);   /* -> STUDENT_4_EDITED - это локальная переменная.
+                При сохранении его в БД, его факультет в курсе о нем (что покажет последний ассерт)
+                Но локально поле faculty у STUDENT_4_EDITED не обновлено, и него новый студент не добавляется */
 
-        // Если у студента произошла смена факультета, то в базе факультетов это должно быть отражено
-        assertThat(oldFacultyOfTarget.getStudents()).doesNotContain(targetStudent);
+//        Если у студента произошла смена факультета, то в базе факультетов это должно быть отражено
+//        Старый факультет больше не содержит старого студента
+        Faculty oldFaculty = facultyRepository.findById(oldFacultyIdOfTarget).orElseThrow();
+        assertThat(oldFaculty.getStudents()).doesNotContain(targetStudent);
 
-        Optional<Faculty> oldFacultyOfStudent = facultyRepository.findById(actual.get().getFaculty().getId());
-        assertThat(oldFacultyOfStudent).isPresent();
-        assertThat(oldFacultyOfStudent.get().getStudents()).contains(targetStudent);
+//        Проверка, что новый факультет действительно содержит обновленного студента
+        Faculty newFaculty = facultyRepository.findById(actualTarget.getFaculty().getId())
+                .orElseThrow();
+        List<Long> studentIdsOfNewFaculty = newFaculty.getStudents()
+                .stream()
+                .map(Student::getId)
+                .toList();
+
+        assertThat(studentIdsOfNewFaculty)
+                .contains(responseEntity.getBody().getId())
+                .contains(targetStudent.getId());
     }
 
     @Test
-    void updateStudentWithIllegalFieldsNegativeTest() {
-        Student expected = savedStudents.get(0);
-        expected.setName(null);
+    void updateStudentWithNonexistentFacultyNegativeTest() {
+        List<Long> ids = facultyRepository.findAll().stream()
+                .map(Faculty::getId)
+                .toList();
+        STUDENT_4_EDITED.setFaculty(savedFaculties.get(0));
+        StudentInputDto inputDto = testUtils.toInputDto(STUDENT_4_EDITED);
+        do {
+            inputDto.setFacultyId(random.nextLong(0, Long.MAX_VALUE));
+        } while (ids.contains(inputDto.getFacultyId()));
 
-        testRestTemplate.put(
-                baseStudentUrl() + "/{id}",
-                STUDENT_4_EDITED,
-                expected.getId());
-
-        Optional<Student> fromDb = studentRepository.findById(expected.getId());
-        assertThat(fromDb).isPresent();
-        assertThat(fromDb.get().getName()).isNotNull();
-
-        expected.setName("randomName");
-        expected.setAge(0);
-
-        testRestTemplate.put(
-                baseStudentUrl() + "/{id}",
-                STUDENT_4_EDITED,
-                expected.getId());
-
-        Optional<Student> fromDb1 = studentRepository.findById(expected.getId());
-        assertThat(fromDb1).isPresent();
-        assertThat(fromDb1.get().getAge()).isNotEqualTo(0);
-    }
-
-    @Test
-    void updateStudentWithoutFacultyNegativeTest() {
+        STUDENT_4_EDITED.setFaculty(savedFaculties.get(0));
         Student expected = savedStudents.get(0);
 
-        testRestTemplate.put(
+        ResponseEntity<String> responseEntity = testRestTemplate.exchange(
                 baseStudentUrl() + "/{id}",
-                STUDENT_WITHOUT_FACULTY,
+                HttpMethod.PUT,
+                new HttpEntity<>(inputDto),
+                String.class,
                 expected.getId());
 
-        Optional<Student> fromDb = studentRepository.findById(expected.getId());
-        assertThat(fromDb).isPresent();
-        assertThat(fromDb.get())
-                .usingRecursiveComparison()
-                .ignoringFields("faculty.students")
-                .isEqualTo(expected);
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(responseEntity.getBody()).matches("FacultyId ([1-9]\\d*) not found");
     }
 
     @Test
@@ -473,10 +538,25 @@ public class StudentControllerRestTemplateTest {
 
     @Test
     void deleteStudentNegativeTest() {
-        int repoSizeBeforeDeleting = studentRepository.findAll().size();
-        testRestTemplate.delete(baseStudentUrl() + "/{id}", -1L);
+        List<Long> ids = studentRepository.findAll().stream().map(Student::getId).toList();
+        Long nonexistentId;
+        do {
+            nonexistentId = random.nextLong(0, Long.MAX_VALUE);
+        } while (ids.contains(nonexistentId));
 
-        assertThat(studentRepository.findAll().size()).isEqualTo(repoSizeBeforeDeleting);
+        int repoSizeBeforeDeleting = studentRepository.findAll().size();
+        ResponseEntity<String> responseEntity = testRestTemplate.exchange(baseStudentUrl() + "/{id}",
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                String.class,
+                nonexistentId);
+
+        assertThat(responseEntity.getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(responseEntity.getBody())
+                .isNull();
+        assertThat(studentRepository.findAll().size())
+                .isEqualTo(repoSizeBeforeDeleting);
     }
 
     @Test
@@ -484,15 +564,16 @@ public class StudentControllerRestTemplateTest {
 //         given
         Student targetStudent = savedStudents.get(0);
         AVATAR_1.setFilePath(AVATAR_1.getFilePath().formatted(targetStudent));
+        RestTemplate patchedRestTemplate = patchedRestTemplate(testRestTemplate);
 
         LinkedMultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("avatar", new FileSystemResource(testResoursePath()));
+        body.add("avatar", new FileSystemResource(testResourcePath()));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
 //        invoking
-        ResponseEntity<Boolean> responseEntity = patchRestTemplate.exchange(
+        ResponseEntity<Boolean> responseEntity = patchedRestTemplate.exchange(
                 baseStudentUrl() + "/{id}/avatar",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, headers),
@@ -505,52 +586,62 @@ public class StudentControllerRestTemplateTest {
         assertThat(responseEntity.getBody()).isNotNull();
         assertThat(responseEntity.getBody()).isTrue();
 
-//        Проверка заполненного поля Avatar avatar у студента в БД
-        Optional<Student> studentFromDb = studentRepository.findById(targetStudent.getId());
-
-        assertThat(studentFromDb).isPresent();
-        assertThat(studentFromDb.get().getAvatar())
+//        Проверка, что в БД к студенту привязался аватар и наоборот
+        Student studentFromDb = studentRepository.findById(targetStudent.getId()).orElseThrow();
+        Avatar avatarFromDb = avatarRepository.findById(studentFromDb.getAvatar().getId()).orElseThrow();
+        assertThat(avatarFromDb)
                 .isNotNull()
                 .usingRecursiveComparison()
-                .ignoringFields("id", "student")
+                .ignoringFields("id", "student", "data")   // Data в БД уже сжатая
                 .isEqualTo(AVATAR_1);
 
-//         Наличие в БД
-        Optional<Avatar> fromAvatarRepo = avatarRepository.findById(studentFromDb.get().getAvatar().getId());
-
-        assertThat(fromAvatarRepo).isPresent();
-        assertThat(fromAvatarRepo.get().getData()).isEqualTo(sentResourceBytes());
+        assertThat(avatarFromDb.getStudent())
+                .usingRecursiveComparison()
+                .isEqualTo(studentFromDb);
 
 //        Наличие в локальном хранилище - из БД берем только путь и смотрим есть по этому пути наш файл локально
-        Path pathToLocalFile = Path.of(fromAvatarRepo.get().getFilePath());
-
+        Path pathToLocalFile = Path.of(avatarFromDb.getFilePath());
         assertThatCode(() -> Files.readAllBytes(pathToLocalFile))
                 .doesNotThrowAnyException();
         assertThat(Files.readAllBytes(pathToLocalFile))
                 .isNotEmpty()
                 .isEqualTo(AVATAR_1.getData());
+
+/*        Так как нельзя сравнить сжатое изображение с исходным, то сравним косвенные признаки успешного сжатия:
+              1. Константа сжатия сработала (100px)
+              2. Соотношение сторон сжатого изображение равно (с погрешностью) соотношению исходника
+*/
+        BufferedImage imageFromResource = ImageIO.read(new File(testResourcePath().toString()));
+        BufferedImage imageFromDb = ImageIO.read(new ByteArrayInputStream(avatarFromDb.getData()));
+        double resourceRatio = (double) imageFromResource.getWidth() / imageFromResource.getHeight();
+        double fromDbRatio = (double) imageFromDb.getWidth() / imageFromDb.getHeight();
+
+        assertThat(imageFromDb.getWidth() == 100).isTrue();
+        assertThat(Math.abs(resourceRatio - fromDbRatio) < 0.05).isTrue();   // Среднее: 0,18
     }
 
     @Test
-    void setAvatarIfStudentNotFoundNegativeTest() {
+    void setAvatarForNonexistentStudentNegativeTest() {
         Student targetStudent = UNSAVED_STUDENT;
+        RestTemplate patchedRestTemplate = patchedRestTemplate(testRestTemplate);
+
         LinkedMultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("avatar", new FileSystemResource(testResoursePath()));
+        body.add("avatar", new FileSystemResource(testResourcePath()));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
-        ResponseEntity<String> responseEntity = patchRestTemplate.exchange(
+        ResponseEntity<String> responseEntity = patchedRestTemplate.exchange(
                 baseStudentUrl() + "/{id}/avatar",
                 HttpMethod.PATCH,
                 new HttpEntity<>(body, headers),
                 String.class,
                 targetStudent.getId());
 
-        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(responseEntity.getBody())
                 .isNotNull()
-                .matches("Student with (.+?) = (.+?) isn't found");
+                .matches("Student with ID ([1-9]\\d*) not found for set Avatar");
 
         assertThat(Files.exists(testResourceDir))
                 .isFalse();
@@ -568,36 +659,32 @@ public class StudentControllerRestTemplateTest {
 
     @ParameterizedTest
     @MethodSource("provideParamsForGetAvatarTests")
-    void getAvatarPositiveTest(String url) throws IOException {
+    void getAvatarFromLocalPositiveTest(String urlEnding) throws IOException {
 
 //        given
         Student student = savedStudents.get(0);
         Files.createDirectories(testResourceDir);   // Без проверки Files.exists() тк AfterEach позаботился об удалении директорий/файлов
-        Files.write(Path.of(sentResourcePath().formatted(student)), Files.readAllBytes(testResoursePath()));
+        Files.write(Path.of(sentResourcePath().formatted(student)), Files.readAllBytes(testResourcePath()));
 
         // Связываем студента и аватар внутри бд, тк getAvatar() ищет аватар исходя из студента и его поля Avatar
-        AVATAR_1.setId(null);
-        AVATAR_1.setFilePath(AVATAR_1.getFilePath().formatted(student));
-        AVATAR_1.setStudent(student);
-        Avatar savedAvatar = avatarRepository.save(AVATAR_1);
-
-        student.setAvatar(savedAvatar);
-        Student expectedStudent = studentRepository.save(student);
+        testUtils.linkStudentAndAvatar(student, AVATAR_1);
 
 //        invoking
         ResponseEntity<byte[]> responseEntity = testRestTemplate.exchange(
-                baseStudentUrl() + url,
+                baseStudentUrl() + urlEnding,
                 HttpMethod.GET,
                 RequestEntity.EMPTY,
                 new ParameterizedTypeReference<>() {
                 },
-                expectedStudent.getId()
+                student.getId()
         );
 
 //        assertions
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+//        Сжатие проверяется в другом методе, тк тут мы руками положили байты в БД, то и ожидаем иж же
         assertThat(responseEntity.getBody())
                 .isNotNull()
+                .isEqualTo(sentResourceBytes())
                 .isEqualTo(AVATAR_1.getData());
 
         HttpHeaders expectedHeaders = new HttpHeaders();
@@ -612,17 +699,10 @@ public class StudentControllerRestTemplateTest {
     @ParameterizedTest
     @MethodSource("provideParamsForGetAvatarTests")
     void getAvatarIfStudentNotFoundNegativeTest(String url) throws IOException {
-//        given
         Student student = savedStudents.get(0);
-        Files.createDirectories(testResourceDir);
-        Files.write(Path.of(sentResourcePath().formatted(student)), Files.readAllBytes(testResoursePath()));
 
-        AVATAR_1.setId(null);
-        AVATAR_1.setFilePath(AVATAR_1.getFilePath().formatted(student));
-        AVATAR_1.setStudent(student);
-        Avatar savedAvatar = avatarRepository.save(AVATAR_1);
-        student.setAvatar(savedAvatar);
-        studentRepository.save(student);
+//        given
+        testUtils.linkStudentAndAvatar(student, AVATAR_1);
 
         long sizeBefore = 0;
         try (Stream<Path> filesWalk = Files.walk(Paths.get(testResourceDir.toUri()))) {
@@ -641,10 +721,10 @@ public class StudentControllerRestTemplateTest {
                 UNSAVED_STUDENT.getId()
         );
 
-        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(responseEntity.getBody())
                 .isNotNull()
-                .matches("Student with (.+?) = (.+?) isn't found");
+                .matches("Student with ID ([1-9]\\d*) not found for set Avatar");
 
         long sizeAfter = 0;
         try (Stream<Path> filesWalk = Files.walk(Paths.get(testResourceDir.toUri()))) {
@@ -669,44 +749,23 @@ public class StudentControllerRestTemplateTest {
 
     @Test
     void getAverageAge() {
-        long actual = studentRepository.findAll().stream()
-                              .mapToInt(Student::getAge)
-                              .sum() / studentRepository.count();
+        Double expected = (double) studentRepository.findAll().stream()
+                .mapToInt(Student::getAge)
+                .sum() / studentRepository.count();
 
-        ResponseEntity<Integer> responseEntity = testRestTemplate.getForEntity(
+        ResponseEntity<Double> responseEntity = testRestTemplate.getForEntity(
                 baseStudentUrl() + "/avg-age",
-                Integer.class
+                Double.class
         );
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(responseEntity.getBody()).isEqualTo(actual);
-    }
-
-    @Test
-    void getLastStudents() {
-        int targetCount = random.nextInt(TEST_lIST_OF_4_STUDENTS.size() * 2);
-
-        List<Student> actual = studentRepository.findAll().stream()
-                .sorted(Comparator.comparing(Student::getId).reversed())
-                .limit(targetCount)
-                .toList();
-
-        ResponseEntity<List<Student>> responseEntity = testRestTemplate.exchange(
-                baseStudentUrl() + "/last/{quantity}",
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                new ParameterizedTypeReference<>() {
-                },
-                targetCount
-        );
-
-        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(responseEntity.getBody()).isEqualTo(actual);
+        assertThat(responseEntity.getBody()).isEqualTo(expected);
     }
 
     @Test
     void getAllAvatars() {
         int pageNumber = random.nextInt(1, 3);
         int pageSize = random.nextInt(1, 6);
+
 
         ResponseEntity<List<AvatarDto>> responseEntity = testRestTemplate.exchange(
                 baseStudentUrl() + "/avatars?pageNumber={pageNumber}&pageSize={pageSize}",
@@ -717,14 +776,40 @@ public class StudentControllerRestTemplateTest {
                 pageNumber, pageSize
         );
 
-        List<AvatarDto> actual = avatarRepository
-                .findAll(PageRequest.of(pageNumber, pageSize))
-                .getContent()
-                .stream()
-                .map(AvatarDto::new)
+        List<AvatarDto> actual = avatarRepository.findAll(PageRequest.of(pageNumber, pageSize))
+                .get()
+                .map(avatarMapper::toDto)
                 .toList();
 
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(responseEntity.getBody()).isEqualTo(actual);
+        assertThat(responseEntity.getBody()).hasSameElementsAs(actual);
+    }
+
+    @Test
+    void searchStudentsTest() {
+
+        String sortParam = List.of("id", "name", "age").get(random.nextInt(0, 2));
+        SortOrder sortOrder = random.nextBoolean() ? SortOrder.ASC : SortOrder.DESC;
+        int pageNumber = 3;
+        int pageSize = 1;
+
+        List<StudentOutputDto> actual = studentRepository.findAll().stream()
+                .sorted(Comparator.comparing(Student::getId))
+                .skip((long) (pageNumber - 1) * pageSize)
+                .limit(pageSize)
+                .map(studentMapper::toDto)
+                .toList();
+
+        ResponseEntity<List<StudentOutputDto>> responseEntity = testRestTemplate.exchange(
+                baseStudentUrl() + "?sortParam={sortParam}&sortOrder={sortOrder}&pageNumber={pageNumber}&pageSize={pageSize}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<>() {},
+                sortParam, sortOrder, pageNumber, pageSize
+        );
+
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).hasSameElementsAs(actual);
+
     }
 }
