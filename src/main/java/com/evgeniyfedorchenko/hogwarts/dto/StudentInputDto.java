@@ -1,18 +1,20 @@
 package com.evgeniyfedorchenko.hogwarts.dto;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class StudentInputDto {
 
-    @NotNull(message = "Student name cannot be empty")
+    @NotBlank(message = "Student name cannot be empty")
     private String name;
 
     @Min(value = 16, message = "Student's age must be greater than 15")
     private int age;
 
     @Min(value = 1, message = "FacultyId must be greater than 0")
-    private long facultyId;
+    @NotNull(message = "FacultyId must not be empty")
+    private Long facultyId;
 
     public String getName() {
         return name;

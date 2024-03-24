@@ -2,14 +2,14 @@ package com.evgeniyfedorchenko.hogwarts.dto;
 
 
 import com.evgeniyfedorchenko.hogwarts.entities.Color;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
 public class FacultyInputDto {
 
-    @NotNull(message = "Faculty name cannot be empty")
+    @NotBlank(message = "Faculty name cannot be empty")
     private String name;
 
-    @NotNull(message = "Faculty color cannot be empty")
+    @NotBlank(message = "Faculty color cannot be empty")
     private Color color;
 
     public String getName() {
