@@ -86,10 +86,10 @@ public class AvatarServiceImpl implements AvatarService {
     }
 
     private byte[] generatePreview(String filePath) throws IOException {
+        BufferedImage image = ImageIO.read(new File(filePath));
         int previewWight = 100;
         int previewHeight = image.getHeight() / (image.getWidth() / previewWight);
 
-        BufferedImage image = ImageIO.read(new File(filePath));
         BufferedImage preview = new BufferedImage(previewWight, previewHeight, image.getType());
         preview.getGraphics().drawImage(image, 0, 0, previewWight, previewHeight, null);
 

@@ -54,7 +54,7 @@ public class StudentServiceImpl implements StudentService {
         Faculty findedFaculty = findFaculty(inputDto.getFacultyId());
         findedFaculty.addStudent(savedStudent);
         facultyRepository.save(findedFaculty);
-        
+
         logger.info("New {} successfully saved", savedStudent);
         return studentMapper.toDto(savedStudent);
     }
@@ -79,7 +79,7 @@ public class StudentServiceImpl implements StudentService {
         }
         Student student = fillStudent(inputDto, studentById.get());
         studentRepository.save(student);
-        
+
         logger.info("{} successfully updated to {}", studentById.get(), student);
         return Optional.of(studentMapper.toDto(student));
     }
@@ -168,11 +168,11 @@ public class StudentServiceImpl implements StudentService {
         Optional<Faculty> facultyOpt = studentRepository.findById(studentId)
                 .map(Student::getFaculty);
         if (facultyOpt.isEmpty()) {
-//        Используется warn потому что у меня не предусмотрены студенты без факультетов
+//        Используется warn потому что не предусмотрены студенты без факультетов
         logger.warn("StudentID {} doesn't have faculty", studentId);
         return Optional.empty();
         }
-        return faculty.map(facultyMapper::toDto);
+        return facultyOpt.map(facultyMapper::toDto);
 
     }
 
@@ -195,7 +195,6 @@ public class StudentServiceImpl implements StudentService {
                     logger.error("Filed to search studentID {} in repo for get his avatar", studentId);
                     throw new EntityNotFoundException("Student with ID " + studentId + " not found");
                 });
-
 
         if (student.getAvatar() == null) {
             logger.info("Avatar of studentID {} not found, but was requested", studentId);
