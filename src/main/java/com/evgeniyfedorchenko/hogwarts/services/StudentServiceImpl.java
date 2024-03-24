@@ -168,11 +168,11 @@ public class StudentServiceImpl implements StudentService {
         Optional<Faculty> facultyOpt = studentRepository.findById(studentId)
                 .map(Student::getFaculty);
         if (facultyOpt.isEmpty()) {
-//        Используется warn потому что у меня не предусмотрены студенты без факультетов
+//        Используется warn потому что не предусмотрены студенты без факультетов
         logger.warn("StudentID {} doesn't have faculty", studentId);
         return Optional.empty();
         }
-        return faculty.map(facultyMapper::toDto);
+        return facultyOpt.map(facultyMapper::toDto);
 
     }
 
