@@ -1,10 +1,10 @@
 package com.evgeniyfedorchenko.hogwarts.controllers;
 
 import com.evgeniyfedorchenko.hogwarts.dto.AvatarDto;
+import com.evgeniyfedorchenko.hogwarts.dto.FacultyOutputDto;
 import com.evgeniyfedorchenko.hogwarts.dto.StudentInputDto;
 import com.evgeniyfedorchenko.hogwarts.dto.StudentOutputDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
-import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.services.AvatarService;
 import com.evgeniyfedorchenko.hogwarts.services.StudentService;
@@ -15,6 +15,7 @@ import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,6 +24,7 @@ import java.util.Optional;
 
 
 @Tag(name = "Students")
+@Validated
 @RestController
 @RequestMapping(StudentController.BASE_STUDENTS_URI)
 public class StudentController {
@@ -80,7 +82,7 @@ public class StudentController {
     public List<StudentOutputDto> getStudentByAge(@RequestParam
                                                   @Min(value = 16, message = "Age must be greater than 15") int age,
                                                   @RequestParam
-                                                  @Min(value = 16, message = "Age must be greater than 15") int upTo) {
+                                                  @Min(value = 16, message = "\"UpTo\" must be greater than 15") int upTo) {
         return studentService.findStudentsByAge(age, upTo);
     }
 
@@ -94,7 +96,7 @@ public class StudentController {
 
     @GetMapping(path = "/{id}/faculty")
     @Operation(summary = "Get faculty of existing student")
-    public ResponseEntity<Faculty> getFacultyOfStudent(@PathVariable
+    public ResponseEntity<FacultyOutputDto> getFacultyOfStudent(@PathVariable
                                                        @Min(value = 1, message = "Id must be greater than 0") Long id) {
         return ResponseEntity.of(studentService.getFaculty(id));
     }

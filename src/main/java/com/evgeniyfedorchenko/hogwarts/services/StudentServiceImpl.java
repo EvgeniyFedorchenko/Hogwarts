@@ -1,6 +1,7 @@
 package com.evgeniyfedorchenko.hogwarts.services;
 
 import com.evgeniyfedorchenko.hogwarts.controllers.SortOrder;
+import com.evgeniyfedorchenko.hogwarts.dto.FacultyOutputDto;
 import com.evgeniyfedorchenko.hogwarts.dto.StudentInputDto;
 import com.evgeniyfedorchenko.hogwarts.dto.StudentOutputDto;
 import com.evgeniyfedorchenko.hogwarts.entities.Avatar;
@@ -8,6 +9,7 @@ import com.evgeniyfedorchenko.hogwarts.entities.Faculty;
 import com.evgeniyfedorchenko.hogwarts.entities.Student;
 import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarProcessingException;
 import com.evgeniyfedorchenko.hogwarts.exceptions.EntityNotFoundException;
+import com.evgeniyfedorchenko.hogwarts.mappers.FacultyMapper;
 import com.evgeniyfedorchenko.hogwarts.mappers.StudentMapper;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
@@ -25,15 +27,18 @@ public class StudentServiceImpl implements StudentService {
     private final FacultyRepository facultyRepository;
     private final AvatarService avatarService;
     private final StudentMapper studentMapper;
+    private final FacultyMapper facultyMapper;
 
     public StudentServiceImpl(StudentRepository studentRepository,
                               FacultyRepository facultyRepository,
                               AvatarService avatarService,
-                              StudentMapper studentMapper) {
+                              StudentMapper studentMapper,
+                              FacultyMapper facultyMapper) {
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
         this.avatarService = avatarService;
         this.studentMapper = studentMapper;
+        this.facultyMapper = facultyMapper;
     }
 
     @Override
@@ -146,15 +151,16 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
-    public Optional<Faculty> getFaculty(Long studentId) {
+    public Optional<FacultyOutputDto> getFaculty(Long studentId) {
         return studentRepository.findById(studentId)
-                .map(Student::getFaculty);
+                .map(Student::getFaculty)
+                .map(facultyMapper::toDto);
     }
 
     @Override
     public boolean setAvatar(Long studentId, MultipartFile avatarFile) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new EntityNotFoundException("Student with ID " + studentId + " not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Student with ID " + studentId + " not found for set Avatar"));
 
         return avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
     }
@@ -162,7 +168,7 @@ public class StudentServiceImpl implements StudentService {
     @Override
     public Optional<Avatar> getAvatar(Long studentId, boolean large) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new EntityNotFoundException("Student with ID " + studentId + " not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Student with ID " + studentId + " not found for set Avatar"));
 
         if (student.getAvatar() == null) {
             return Optional.empty();
@@ -178,6 +184,6 @@ public class StudentServiceImpl implements StudentService {
 
     private Faculty findFaculty(Long id) {
         return facultyRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Faculty with ID " + id + " not found"));
+                .orElseThrow(() -> new EntityNotFoundException("FacultyId " + id + " not found"));
     }
 }
