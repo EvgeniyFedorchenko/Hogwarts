@@ -13,6 +13,8 @@ import com.evgeniyfedorchenko.hogwarts.mappers.FacultyMapper;
 import com.evgeniyfedorchenko.hogwarts.mappers.StudentMapper;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,6 +30,8 @@ public class StudentServiceImpl implements StudentService {
     private final AvatarService avatarService;
     private final StudentMapper studentMapper;
     private final FacultyMapper facultyMapper;
+    private final Logger logger = LoggerFactory.getLogger(StudentServiceImpl.class);
+
 
     public StudentServiceImpl(StudentRepository studentRepository,
                               FacultyRepository facultyRepository,
@@ -50,7 +54,8 @@ public class StudentServiceImpl implements StudentService {
         Faculty findedFaculty = findFaculty(inputDto.getFacultyId());
         findedFaculty.addStudent(savedStudent);
         facultyRepository.save(findedFaculty);
-
+        
+        logger.info("New {} successfully saved", savedStudent);
         return studentMapper.toDto(savedStudent);
     }
 
@@ -69,11 +74,13 @@ public class StudentServiceImpl implements StudentService {
 
         Optional<Student> studentById = studentRepository.findById(id);
         if (studentById.isEmpty()) {
+            logger.debug("StudentID {} not found for update", id);
             return Optional.empty();
         }
         Student student = fillStudent(inputDto, studentById.get());
         studentRepository.save(student);
-
+        
+        logger.info("{} successfully updated to {}", studentById.get(), student);
         return Optional.of(studentMapper.toDto(student));
     }
 
@@ -89,7 +96,7 @@ public class StudentServiceImpl implements StudentService {
         if (dest.getFaculty() != null && !dest.getFaculty().equals(findedFaculty)) {
             facultyRepository.save(dest.getFaculty().removeStudent(dest));
             facultyRepository.save(findedFaculty.addStudent(dest));
-
+            logger.debug("At {} changed faculty from {} to {}", dest, dest.getFaculty(), findedFaculty);
         } else {
             dest.setFaculty(findedFaculty);
         }
@@ -103,7 +110,8 @@ public class StudentServiceImpl implements StudentService {
         List<Student> students = sortOrder == SortOrder.ASC
                 ? studentRepository.findLastStudentsAscSort(sortParam, pageSize, offset)
                 : studentRepository.findLastStudentsDescSort(sortParam, pageSize, offset);
-
+        logger.debug("Calling searchStudents with params: sortParam={}, sortOrder={}, pageNumber={}, pageSize={} returned student's ids: {}",
+                sortParam, sortOrder, pageNumber, pageSize, students.stream().map(Student::getId).toList());
         return students.stream()
                 .map(studentMapper::toDto)
                 .toList();
@@ -125,6 +133,7 @@ public class StudentServiceImpl implements StudentService {
 
         Optional<Student> studentOpt = studentRepository.findById(id);
         if (studentOpt.isEmpty()) {
+            logger.debug("StudentID {} not found for delete", id);
             return Optional.empty();
         }
 
@@ -136,6 +145,7 @@ public class StudentServiceImpl implements StudentService {
                 .ifPresent(faculty -> facultyRepository.save(faculty.removeStudent(student)));
 
         studentRepository.deleteById(student.getId());
+        logger.info("{} successfully deleted", student);
         return studentOpt;
     }
 
@@ -147,43 +157,72 @@ public class StudentServiceImpl implements StudentService {
                 ? studentRepository.findByAge(age)
                 : studentRepository.findByAgeBetween(age, upTo);
 
+        logger.debug("Calling searchStudents with params: age={}, upTo={} returned student's ids: {}",
+                age, upTo, students.stream().map(Student::getId).toList());
+
         return students.stream().map(studentMapper::toDto).toList();
     }
 
     @Override
     public Optional<FacultyOutputDto> getFaculty(Long studentId) {
-        return studentRepository.findById(studentId)
-                .map(Student::getFaculty)
-                .map(facultyMapper::toDto);
+        Optional<Faculty> facultyOpt = studentRepository.findById(studentId)
+                .map(Student::getFaculty);
+        if (facultyOpt.isEmpty()) {
+//        Используется warn потому что у меня не предусмотрены студенты без факультетов
+        logger.warn("StudentID {} doesn't have faculty", studentId);
+        return Optional.empty();
+        }
+        return faculty.map(facultyMapper::toDto);
+
     }
 
     @Override
     public boolean setAvatar(Long studentId, MultipartFile avatarFile) {
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new EntityNotFoundException("Student with ID " + studentId + " not found for set Avatar"));
+        Student student = studentRepository.findById(studentId).orElseThrow(() -> {
+                    logger.error("Filed to find studentID {} for set Avatar", studentId);
+                    throw new EntityNotFoundException("Student with ID " + studentId + " not found");
+                });
 
-        return avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
+        boolean resultOfSaving = avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
+        logger.info("Successful saving avatar and set its to {}", student);
+        return resultOfSaving;
+
     }
 
     @Override
     public Optional<Avatar> getAvatar(Long studentId, boolean large) {
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new EntityNotFoundException("Student with ID " + studentId + " not found for set Avatar"));
+        Student student = studentRepository.findById(studentId).orElseThrow(() -> {
+                    logger.error("Filed to search studentID {} in repo for get his avatar", studentId);
+                    throw new EntityNotFoundException("Student with ID " + studentId + " not found");
+                });
+
 
         if (student.getAvatar() == null) {
+            logger.info("Avatar of studentID {} not found, but was requested", studentId);
             return Optional.empty();
         }
         Long avatarId = student.getAvatar().getId();
 
+        /* В этом блоке try логика такая:
+         *  - Исключение возникает только если аватар найден в БД, но локально файлы не удалось прочитать
+         *  - Optional.empty() возвращается только если в БД не найдена запись
+         *  - Наполненный Optional возвращается в случае полного успеха */
         try {
-            return large ? avatarService.getFromLocal(avatarId) : avatarService.findAvatar(avatarId);
+            Optional<Avatar> avatarOpt = large ? avatarService.getFromLocal(avatarId) : avatarService.findAvatar(avatarId);
+            logger.info("avatar of studentID %s ".formatted(studentId) + (avatarOpt.isEmpty() ? "not found in DB" : "successfully getting"));
+            return avatarOpt;
+
         } catch (Exception e) {   // Ловим здесь, потому что нам нужен studentId для фидбека исключения
+            logger.error("Filed to read data image of StudentID {} from Local", studentId, e);
             throw new AvatarProcessingException("Unable to read avatar-data of student with id = " + studentId, e);
         }
     }
 
     private Faculty findFaculty(Long id) {
-        return facultyRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("FacultyId " + id + " not found"));
+        return facultyRepository.findById(id).orElseThrow(() -> {
+                    logger.error("Filed to found FacultyID {} for set to student", id);
+                    throw new EntityNotFoundException("Faculty with ID " + id + " not found");
+                });
+
     }
 }

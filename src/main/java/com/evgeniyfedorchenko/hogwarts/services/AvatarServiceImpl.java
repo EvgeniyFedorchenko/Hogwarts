@@ -7,6 +7,8 @@ import com.evgeniyfedorchenko.hogwarts.exceptions.AvatarProcessingException;
 import com.evgeniyfedorchenko.hogwarts.mappers.AvatarMapper;
 import com.evgeniyfedorchenko.hogwarts.repositories.AvatarRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,8 @@ public class AvatarServiceImpl implements AvatarService {
     private final AvatarRepository avatarRepository;
     private final StudentRepository studentRepository;
     private final AvatarMapper avatarMapper;
+
+    private final Logger logger = LoggerFactory.getLogger(AvatarServiceImpl.class);
 
     @Value("${path.to.avatars.folder}")
     private Path avatarsDir;
@@ -57,12 +61,14 @@ public class AvatarServiceImpl implements AvatarService {
         try {
             avatar = fillAvatar(student, avatarFile);
         } catch (IOException e) {
+            logger.error("The image data could not be read for saving", e);
             throw new AvatarProcessingException("Unable to read avatar-data of student with id = " + student.getId(), e);
         }
 
         Avatar savedAvatar = avatarRepository.save(avatar);
         student.setAvatar(savedAvatar);
         studentRepository.save(student);
+        logger.info("Successful saving picture of {} to DB", student);
         return true;
     }
 
@@ -80,18 +86,17 @@ public class AvatarServiceImpl implements AvatarService {
     }
 
     private byte[] generatePreview(String filePath) throws IOException {
-
-        BufferedImage image = ImageIO.read(new File(filePath));
         int previewWight = 100;
         int previewHeight = image.getHeight() / (image.getWidth() / previewWight);
 
+        BufferedImage image = ImageIO.read(new File(filePath));
         BufferedImage preview = new BufferedImage(previewWight, previewHeight, image.getType());
         preview.getGraphics().drawImage(image, 0, 0, previewWight, previewHeight, null);
 
         ByteArrayOutputStream baoStream = new ByteArrayOutputStream();
         ImageIO.write(preview, getExtension(filePath), baoStream);
+        logger.info("Image compression was successful");
         return baoStream.toByteArray();
-
     }
 
     @Override
@@ -100,17 +105,23 @@ public class AvatarServiceImpl implements AvatarService {
             if (!Files.exists(avatarsDir) || !Files.isDirectory(avatarsDir)) {
                 Files.createDirectories(avatarsDir);
             }
+        } catch (IOException e) {
+            logger.error("Failed to create folder at path {}", avatarsDir, e);
+            throw new RuntimeException(e);
+        }
             String fileName = student.toString();
             String extension = "." + getExtension(avatarFile.getOriginalFilename());
             Path filePath = Path.of(avatarsDir + "\\" + fileName + extension);
 
             deleteIfExists(fileName);
 
+        try {
             Files.write(filePath, avatarFile.getBytes());
+            logger.info("The image data of {} successfully saved to Local", student);
             return true;
-
         } catch (IOException e) {
-            throw new RuntimeException(e);   // Если проблемы с папками или доступом к ним
+            logger.error("The image data could not be read for saving", e);
+            throw new AvatarProcessingException("Unable to read avatar-data of student with id = " + student.getId(), e);
         }
     }
 
@@ -138,22 +149,28 @@ public class AvatarServiceImpl implements AvatarService {
         Avatar fromDb = avatarOpt.get();
         Avatar afr = new Avatar();
 
+//        Files.readAllBytes() логируется на один метод выше по стеку
         afr.setData(Files.readAllBytes(Path.of(fromDb.getFilePath())));
         afr.setMediaType(fromDb.getMediaType());
+
+        logger.info("The image data successfully received from local");
         return Optional.of(afr);
     }
 
     @Override
     public List<AvatarDto> getAllAvatars(int pageNumber, int pageSize) {
-        return avatarRepository.findAll(PageRequest.of(pageNumber - 1, pageSize))
+        List<AvatarDto> avatarDtos = avatarRepository.findAll(PageRequest.of(pageNumber - 1, pageSize))
                 .get()
                 .map(avatarMapper::toDto)
                 .toList();
+        logger.info("Entries from the avatar repo successfully received from DB with pagination");
+        return avatarDtos;
     }
 
     public void deleteAvatar(Student student) {
         avatarRepository.deleteById(student.getAvatar().getId());
         deleteIfExists(student.toString());
+        logger.info("Avatar of student {} successfully deleted from DB and Local", student);
     }
 
     private String getExtension(String filePath) {
