@@ -10,6 +10,8 @@ import com.evgeniyfedorchenko.hogwarts.mappers.FacultyMapper;
 import com.evgeniyfedorchenko.hogwarts.mappers.StudentMapper;
 import com.evgeniyfedorchenko.hogwarts.repositories.FacultyRepository;
 import com.evgeniyfedorchenko.hogwarts.repositories.StudentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ public class FacultyServiceImpl implements FacultyService {
     private final StudentRepository studentRepository;
     private final FacultyMapper facultyMapper;
     private final StudentMapper studentMapper;
+    private final Logger logger = LoggerFactory.getLogger(FacultyServiceImpl.class);
 
     public FacultyServiceImpl(FacultyRepository facultyRepository,
                               StudentRepository studentRepository,
@@ -39,12 +42,15 @@ public class FacultyServiceImpl implements FacultyService {
 
         Faculty faculty = fillFaculty(inputDto, new Faculty());
         Faculty savedFaculty = facultyRepository.save(faculty);
+        logger.info("New {} successfully saved", faculty);
         return facultyMapper.toDto(savedFaculty);
     }
 
     @Override
     public Optional<FacultyOutputDto> findFaculty(Long id) {
-        return facultyRepository.findById(id).map(facultyMapper::toDto);
+        Optional<FacultyOutputDto> outputDtoOpt = facultyRepository.findById(id).map(facultyMapper::toDto);
+        logger.debug("FacultyID %s ".formatted(id) + (outputDtoOpt.isEmpty() ? "not found" : "was found") + "for find");
+        return outputDtoOpt;
 
     }
 
@@ -53,10 +59,13 @@ public class FacultyServiceImpl implements FacultyService {
 
         Optional<Faculty> byId = facultyRepository.findById(id);
         if (id <= 0L || byId.isEmpty()) {
+            logger.debug("FacultyID {} not found for update", id);
             return Optional.empty();
         }
         Faculty oldFaculty = fillFaculty(facultyInputDto, byId.get());
         facultyRepository.save(oldFaculty);
+        logger.info("{} successfully updated to {}", byId, oldFaculty);
+
         return Optional.of(facultyMapper.toDto(oldFaculty));
     }
 
@@ -77,8 +86,10 @@ public class FacultyServiceImpl implements FacultyService {
             List<Student> students = facultyOpt.get().getStudents();
             studentRepository.deleteAll(students);
             facultyRepository.delete(facultyOpt.get());
+            logger.info("{} successfully deleted with its students", facultyOpt.get());
             return facultyOpt;
         } else {
+            logger.debug("FacultyID {} not found for delete", id);
             return Optional.empty();
         }
     }
