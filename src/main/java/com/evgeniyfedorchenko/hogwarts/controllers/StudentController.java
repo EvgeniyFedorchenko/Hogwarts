@@ -132,6 +132,18 @@ public class StudentController {
         return ResponseEntity.of(studentService.deleteStudent(id));
     }
 
+    @GetMapping(path = "/namesStartsWith")
+    @Operation(summary = "Get student names in uppercase starting with a input letter")
+    public List<String> getStudentNamesStartsWith(@RequestParam String letter) {
+        return studentService.getStudentNamesStartsWith(letter);
+    }
+
+    @GetMapping(path = "/avg-age-aw")
+    @Operation(summary = "Get the average age in another way")
+    public Double getAverageAge2() {
+        return studentService.getAverageAgeCalcByProgramMeans();
+    }
+
 
     private ResponseEntity<byte[]> setHeaders(Avatar avatar) {
         return ResponseEntity.status(HttpStatus.OK)

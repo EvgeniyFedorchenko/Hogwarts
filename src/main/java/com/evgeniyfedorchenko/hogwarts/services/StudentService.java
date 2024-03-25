@@ -34,4 +34,8 @@ public interface StudentService {
     boolean setAvatar(Long id, MultipartFile avatarFile);
 
     Optional<Avatar> getAvatar(Long id, boolean large);
+
+    List<String> getStudentNamesStartsWith(String letter);
+
+    Double getAverageAgeCalcByProgramMeans();
 }

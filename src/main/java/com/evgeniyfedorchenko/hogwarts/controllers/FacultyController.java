@@ -67,4 +67,10 @@ public class FacultyController {
     public ResponseEntity<Faculty> deleteFaculty(@PathVariable @Min(value = 1, message = "Id must be greater than 0") Long id) {
         return ResponseEntity.of(facultyService.deleteFaculty(id));
     }
+
+    @GetMapping(path = "/longest-name")
+    @Operation(summary = "Get longest name of existing faculties")
+    public ResponseEntity<String> getLongestFacultyName() {
+        return ResponseEntity.of(facultyService.findLongestName());
+    }
 }

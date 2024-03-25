@@ -217,6 +217,29 @@ public class StudentServiceImpl implements StudentService {
         }
     }
 
+    @Override
+    public List<String> getStudentNamesStartsWith(String letter) {
+        logger.debug("Invoke non-optimal method \"studentRepository.findAll()\"");
+        return studentRepository.findAll()
+                .parallelStream()
+                .map(Student::getName)
+                .filter(name -> name.startsWith(letter))
+                .map(String::toUpperCase)
+                .sorted()
+                .toList();
+    }
+
+    @Override
+    public Double getAverageAgeCalcByProgramMeans() {
+        logger.debug("Invoke non-optimal method \"studentRepository.findAll()\"");
+        return studentRepository.findAll()
+                .stream()
+                .mapToInt(Student::getAge)
+                .average()
+                .orElse(0);
+        // Кажется тут лучше без параллельности
+    }
+
     private Faculty findFaculty(Long id) {
         return facultyRepository.findById(id).orElseThrow(() -> {
                     logger.error("Filed to found FacultyID {} for set to student", id);
