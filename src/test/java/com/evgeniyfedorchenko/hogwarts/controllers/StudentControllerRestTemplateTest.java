@@ -312,7 +312,7 @@ public class StudentControllerRestTemplateTest {
         int age = savedStudents.get(0).getAge();
         int upTo;
         do {
-            upTo = savedStudents.get(1).getAge();
+            upTo = random.nextInt(0, Integer.MAX_VALUE);
         } while (upTo == age);
 
         if (upTo < age) {
@@ -724,7 +724,7 @@ public class StudentControllerRestTemplateTest {
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(responseEntity.getBody())
                 .isNotNull()
-                .matches("Student with ID ([1-9]\\d*) not found for set Avatar");
+                .matches("Student with ID ([1-9]\\d*) not found for get Avatar");
 
         long sizeAfter = 0;
         try (Stream<Path> filesWalk = Files.walk(Paths.get(testResourceDir.toUri()))) {
