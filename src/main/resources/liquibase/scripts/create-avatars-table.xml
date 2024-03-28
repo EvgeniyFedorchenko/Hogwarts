@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="create-avatars-table.3" author="evgeniy-fedorchenko">
+
+        <preConditions>
+            <and>
+                <not>
+                    <tableExists tableName="avatars"/>
+                </not>
+                <tableExists tableName="students"/>
+            </and>
+        </preConditions>
+
+        <createTable tableName="avatars">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="file_path" type="VARCHAR"/>
+            <column name="media_type" type="VARCHAR"/>
+            <column name="data" type="oid"/>
+            <column name="student_id" type="BIGINT"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="avatars"
+                                 baseColumnNames="student_id"
+                                 constraintName="FK_STUDENT_ID"
+                                 referencedTableName="students"
+                                 referencedColumnNames="id"/>
+    </changeSet>
+
+</databaseChangeLog>
