@@ -22,4 +22,6 @@ public interface FacultyService {
     List<FacultyOutputDto> findFacultyByColorOrPartName(Color color, String namePart);
 
     List<StudentOutputDto> findStudents(Long id);
+
+    Optional<String> findLongestName();
 }

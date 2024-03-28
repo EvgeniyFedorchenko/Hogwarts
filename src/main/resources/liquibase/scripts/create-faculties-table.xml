@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="create-faculties-table.1" author="evgeniy-fedorchenko">
+
+        <preConditions>
+            <not>
+                <tableExists tableName="faculties"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="faculties">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="color" type="SMALLINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint constraintName="name-color-unique"
+                             tableName="faculties"
+                             columnNames="name, color"/>
+
+    </changeSet>
+
+</databaseChangeLog>

@@ -19,4 +19,9 @@ public class InfoController {
     public Integer getUsedPort() {
         return infoService.getUsedPort();
     }
+
+    @GetMapping(path = "/algo")
+    public long optimizeAlgorithm() {
+        return infoService.optimizeAlgorithm();
+    }
 }

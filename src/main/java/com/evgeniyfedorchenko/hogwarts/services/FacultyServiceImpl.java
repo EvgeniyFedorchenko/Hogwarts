@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class FacultyServiceImpl implements FacultyService {
@@ -111,5 +112,26 @@ public class FacultyServiceImpl implements FacultyService {
         return studentRepository.findByFaculty_Id(id).stream()
                 .map(studentMapper::toDto)
                 .toList();
+    }
+
+    @Override
+    public Optional<String> findLongestName() {
+
+        AtomicReference<String> longestName = new AtomicReference<>("");
+
+        logger.debug("Invoke non-optimal method \"facultyRepository.findAll()\"");
+        facultyRepository.findAll().stream()
+                .map(Faculty::getName)
+                .forEach(name -> {
+                    if (longestName.get().length() < name.length()) {
+                        longestName.set(name);
+                    }
+                });
+        return longestName.get().equals("") ? Optional.empty() : Optional.of(longestName.get());
+
+        /* Да, можно отсортировать по длине строки и вернуть самую длинную,
+            но мне кажется так быстрее - просто один раз пройтись по списку имен и каждое сравнивать
+            P.S. Компилятор не дает сделать переменную обычной строкой и присваивать ей в стриме новое значение,
+                 так что пришлось сделать вот так */
     }
 }

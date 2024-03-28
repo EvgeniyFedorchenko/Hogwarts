@@ -180,7 +180,7 @@ public class StudentServiceImpl implements StudentService {
     public boolean setAvatar(Long studentId, MultipartFile avatarFile) {
         Student student = studentRepository.findById(studentId).orElseThrow(() -> {
                     logger.error("Filed to find studentID {} for set Avatar", studentId);
-                    throw new EntityNotFoundException("Student with ID " + studentId + " not found");
+                    throw new EntityNotFoundException("Student with ID " + studentId + " not found for set Avatar");
                 });
 
         boolean resultOfSaving = avatarService.downloadToLocal(student, avatarFile) && avatarService.downloadToDb(student, avatarFile);
@@ -193,7 +193,7 @@ public class StudentServiceImpl implements StudentService {
     public Optional<Avatar> getAvatar(Long studentId, boolean large) {
         Student student = studentRepository.findById(studentId).orElseThrow(() -> {
                     logger.error("Filed to search studentID {} in repo for get his avatar", studentId);
-                    throw new EntityNotFoundException("Student with ID " + studentId + " not found");
+                    throw new EntityNotFoundException("Student with ID " + studentId + " not found for get Avatar");
                 });
 
         if (student.getAvatar() == null) {
@@ -217,10 +217,33 @@ public class StudentServiceImpl implements StudentService {
         }
     }
 
+    @Override
+    public List<String> getStudentNamesStartsWith(String letter) {
+        logger.debug("Invoke non-optimal method \"studentRepository.findAll()\"");
+        return studentRepository.findAll()
+                .parallelStream()
+                .map(Student::getName)
+                .filter(name -> name.startsWith(letter))
+                .map(String::toUpperCase)
+                .sorted()
+                .toList();
+    }
+
+    @Override
+    public Double getAverageAgeCalcByProgramMeans() {
+        logger.debug("Invoke non-optimal method \"studentRepository.findAll()\"");
+        return studentRepository.findAll()
+                .stream()
+                .mapToInt(Student::getAge)
+                .average()
+                .orElse(0);
+        // Кажется тут лучше без параллельности
+    }
+
     private Faculty findFaculty(Long id) {
         return facultyRepository.findById(id).orElseThrow(() -> {
                     logger.error("Filed to found FacultyID {} for set to student", id);
-                    throw new EntityNotFoundException("Faculty with ID " + id + " not found");
+                    throw new EntityNotFoundException("FacultyId " + id + " not found");
                 });
 
     }

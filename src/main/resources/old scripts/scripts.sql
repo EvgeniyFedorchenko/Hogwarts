@@ -13,4 +13,6 @@ SELECT * FROM students WHERE LOWER(name) LIKE '%o%';
 SELECT * FROM students WHERE age > students.id;
 
 SELECT * FROM students ORDER BY age;
+select * from databasechangelog;
+drop table databasechangelog
 

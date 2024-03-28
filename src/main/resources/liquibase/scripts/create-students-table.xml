@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+
+    <changeSet id="create-students-table.2" author="evgeniy-fedorchenko">
+
+        <preConditions>
+            <and>
+                <not>
+                    <tableExists tableName="students"/>
+                </not>
+                <tableExists tableName="faculties"/>
+            </and>
+        </preConditions>
+
+        <createTable tableName="students">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="age" type="INTEGER">
+                <constraints checkConstraint="age >= 16"/>
+            </column>
+            <column name="faculty_id" type="BIGINT"/>
+            <column name="avatar_id" type="BIGINT"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="students"
+                                 baseColumnNames="faculty_id"
+                                 constraintName="FK_FACULTY_ID"
+                                 referencedTableName="faculties"
+                                 referencedColumnNames="id"/>
+
+    </changeSet>
+
+</databaseChangeLog>
