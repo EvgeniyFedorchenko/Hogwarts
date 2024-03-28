@@ -109,11 +109,11 @@ public class AvatarServiceImpl implements AvatarService {
             logger.error("Failed to create folder at path {}", avatarsDir, e);
             throw new RuntimeException(e);
         }
-            String fileName = student.toString();
-            String extension = "." + getExtension(avatarFile.getOriginalFilename());
-            Path filePath = Path.of(avatarsDir + "\\" + fileName + extension);
+        String fileName = student.toString();
+        String extension = "." + getExtension(avatarFile.getOriginalFilename());
+        Path filePath = Path.of(avatarsDir + "\\" + fileName + extension);
 
-            deleteIfExists(fileName);
+        deleteIfExists(fileName);
 
         try {
             Files.write(filePath, avatarFile.getBytes());
