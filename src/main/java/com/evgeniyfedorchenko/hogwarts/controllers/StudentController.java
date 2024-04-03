@@ -144,6 +144,17 @@ public class StudentController {
         return studentService.getAverageAgeCalcByProgramMeans();
     }
 
+    @GetMapping(path = "print-parallel")
+    @Operation(summary = "Print students as parallel. Inner method")
+    public void printStudentsAsParallel() {
+        studentService.printStudentsAsParallel();
+    }
+
+    @GetMapping(path = "print-synchronized")
+    @Operation(summary = "Print students synchronized. Inner method")
+    public void printStudentsSynchronized() {
+        studentService.printStudentsSynchronized();
+    }
 
     private ResponseEntity<byte[]> setHeaders(Avatar avatar) {
         return ResponseEntity.status(HttpStatus.OK)

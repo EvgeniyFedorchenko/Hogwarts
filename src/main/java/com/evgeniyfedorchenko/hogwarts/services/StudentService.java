@@ -38,4 +38,8 @@ public interface StudentService {
     List<String> getStudentNamesStartsWith(String letter);
 
     Double getAverageAgeCalcByProgramMeans();
+
+    void printStudentsAsParallel();
+
+    void printStudentsSynchronized();
 }
