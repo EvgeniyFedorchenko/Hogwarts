@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -237,7 +238,41 @@ public class StudentServiceImpl implements StudentService {
                 .mapToInt(Student::getAge)
                 .average()
                 .orElse(0);
-        // Кажется тут лучше без параллельности
+    }
+
+    @Override
+    public void printStudentsAsParallel() {
+        List<StudentOutputDto> students = searchStudents("id", SortOrder.ASC, 1, 6);
+        if (students.size() != 6) {
+            logger.info("Not enough students");
+        }
+        new Thread(() -> {
+            logger.info(students.get(2).toString());
+            logger.info(students.get(3).toString());
+        }).start();
+
+        new Thread(() -> {
+            logger.info(students.get(4).toString());
+            logger.info(students.get(5).toString());
+        }).start();
+
+        logger.info(students.get(1).toString());
+        logger.info(students.get(2).toString());
+    }
+
+    @Override
+    public void printStudentsSynchronized() {
+        List<StudentOutputDto> students = searchStudents("id", SortOrder.ASC, 1, 6);
+        if (students.size() != 6) {
+            logger.info("Not enough students");
+        }
+        new Thread(() -> printSync(students.get(2), students.get(3))).start();
+        new Thread(() -> printSync(students.get(2), students.get(5))).start();
+        printSync(students.get(0), students.get(1));
+    }
+
+    private synchronized void printSync(StudentOutputDto... students) {
+        Arrays.stream(students).forEach(studentOut -> logger.info("{}", studentOut));
     }
 
     private Faculty findFaculty(Long id) {

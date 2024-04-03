@@ -39,4 +39,13 @@ public class StudentInputDto {
     public void setFacultyId(Long facultyId) {
         this.facultyId = facultyId;
     }
+
+    @Override
+    public String toString() {
+        return "StudentInputDto{" +
+               "name='" + name + '\'' +
+               ", age=" + age +
+               ", facultyId=" + facultyId +
+               '}';
+    }
 }
